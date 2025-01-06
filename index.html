@@ -10,6 +10,7 @@
 </head>
 
 <body>
+    <!-- Previous content remains the same -->
     <div id="header">
         <h1>ENDGAME</h1>
         <div>
@@ -20,6 +21,35 @@
     <div id="status-messages"></div>
     <div id="content"></div>
     <div id="choices"></div>
+
+    <!-- Modal for contribution -->
+    <div id="contribution-modal" class="modal">
+        <div class="modal-content">
+            <h2>Add New Entry</h2>
+            <div class="form-group">
+                <label for="choice-text">Choice text (how to get here):</label>
+                <input type="text" id="choice-text" maxlength="128"
+                    placeholder="Enter the choice text that leads here...">
+                <div class="character-count">0/128</div>
+            </div>
+            <div class="form-group">
+                <label for="content-text">Entry content:</label>
+                <textarea id="content-text" maxlength="2048" rows="6"
+                    placeholder="Enter the story content..."></textarea>
+                <div class="character-count">0/2048</div>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="is-ending">
+                    This is an ending
+                </label>
+            </div>
+            <div class="modal-buttons">
+                <button id="submit-entry">Submit (0.0001 ETH)</button>
+                <button id="cancel-entry">Cancel</button>
+            </div>
+        </div>
+    </div>
     <script src="config.js"></script>
     <script src="app.js"></script>
 </body>

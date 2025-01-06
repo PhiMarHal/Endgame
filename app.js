@@ -16,9 +16,11 @@ let dataCache = {
 // Initialize app
 async function initializeApp() {
     try {
+        console.log('Initializing app...');
         // Set up read-only provider
         provider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_URL);
         contract = new ethers.Contract(CONFIG.CONTRACT_ADDRESS, CONFIG.CONTRACT_ABI, provider);
+        console.log('Contract initialized:', CONFIG.CONTRACT_ADDRESS);
 
         // Set up wallet connection button
         const walletButton = document.getElementById('wallet-button');
@@ -39,7 +41,8 @@ async function initializeApp() {
         }
 
         // Start periodic data updates
-        fetchLatestData();
+        console.log('Fetching initial data...');
+        await fetchLatestData();
         startPeriodicUpdates();
 
     } catch (error) {
@@ -47,16 +50,23 @@ async function initializeApp() {
         showStatus(`Initialization error: ${error.message}`, 'error');
     }
 }
-
 // Fetch and display entry with its choices
 async function fetchLatestData() {
     try {
+        console.log('Fetching entry:', currentEntryId);
         const entry = await contract.getFullEntry(currentEntryId);
+        console.log('Got entry:', entry);
         await displayEntryAndChoices(entry);
         dataCache.lastUpdate = Date.now();
     } catch (error) {
         console.error('Error fetching data:', error);
         showStatus('Error fetching story data', 'error');
+        // Log the full error details
+        console.error('Full error:', {
+            message: error.message,
+            code: error.code,
+            error
+        });
     }
 }
 
@@ -229,8 +239,9 @@ function updateWalletDisplay() {
 }
 
 async function displayEntryAndChoices(fullEntry) {
-    // Destructure the array into named variables
+    console.log('Full entry:', fullEntry);
     const [origin, choice, content, end, next, score, author] = fullEntry;
+    console.log('Destructured data:', { origin, choice, content, end, next, score, author });
 
     // Display the entry content
     const contentDiv = document.getElementById('content');
@@ -241,17 +252,17 @@ async function displayEntryAndChoices(fullEntry) {
     choicesDiv.innerHTML = ''; // Clear existing choices
 
     // For each next entry ID in the array
+    console.log('Next entries:', next);
     for (const nextId of next) {
         try {
-            // Fetch the choice text from the next entry
+            console.log('Fetching entry:', nextId.toString());
             const nextEntry = await contract.entries(nextId);
+            console.log('Got entry:', nextEntry);
 
-            // Create and append choice button
             const choiceButton = document.createElement('button');
             choiceButton.className = 'choice-button';
             choiceButton.textContent = nextEntry.choice;
 
-            // Add click handler to navigate to this choice
             choiceButton.addEventListener('click', async () => {
                 currentEntryId = nextId;
                 await fetchLatestData();
@@ -262,7 +273,18 @@ async function displayEntryAndChoices(fullEntry) {
             console.error(`Error fetching choice ${nextId}:`, error);
         }
     }
+
+    // Add contribution button if this isn't an ending
+    if (!end) {
+        const contributeButton = document.createElement('button');
+        contributeButton.id = 'contribute-button';
+        contributeButton.className = 'choice-button';
+        contributeButton.textContent = 'Add your own...';
+        contributeButton.onclick = showContributionModal;
+        choicesDiv.appendChild(contributeButton);
+    }
 }
+
 
 // Update the status display function to show the div
 function showStatus(message, type = 'info') {
@@ -302,6 +324,80 @@ function startPeriodicUpdates() {
         }
     }, CONFIG.UPDATE_INTERVAL);
 }
+
+// Modal management
+function showContributionModal() {
+    const modal = document.getElementById('contribution-modal');
+    modal.style.display = 'block';
+}
+
+function hideContributionModal() {
+    const modal = document.getElementById('contribution-modal');
+    modal.style.display = 'none';
+
+    // Clear form
+    document.getElementById('choice-text').value = '';
+    document.getElementById('content-text').value = '';
+    document.getElementById('is-ending').checked = false;
+}
+
+// Handle submission
+async function submitContribution() {
+    const choiceText = document.getElementById('choice-text').value;
+    const contentText = document.getElementById('content-text').value;
+    const isEnding = document.getElementById('is-ending').checked;
+
+    if (!choiceText || !contentText) {
+        showStatus('Please fill in both fields', 'error');
+        return;
+    }
+
+    // Connect wallet if not connected
+    if (!userAddress) {
+        const connected = await connectWallet();
+        if (!connected) return;
+    }
+
+    try {
+        const tx = await contract.contribute(
+            currentEntryId,
+            choiceText,
+            contentText,
+            isEnding,
+            { value: ethers.utils.parseEther("0.0001") }
+        );
+
+        showStatus('Transaction submitted! Waiting for confirmation...', 'info');
+        await tx.wait();
+        showStatus('Entry added successfully!', 'success');
+        hideContributionModal();
+        await fetchLatestData();  // Refresh the display
+
+    } catch (error) {
+        console.error('Error submitting entry:', error);
+        showStatus(`Failed to submit entry: ${error.message}`, 'error');
+    }
+}
+
+// Setup event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('cancel-entry').onclick = hideContributionModal;
+    document.getElementById('submit-entry').onclick = submitContribution;
+
+    // Add character counters
+    const choiceInput = document.getElementById('choice-text');
+    const contentInput = document.getElementById('content-text');
+
+    choiceInput.oninput = () => {
+        const count = choiceInput.value.length;
+        choiceInput.parentElement.querySelector('.character-count').textContent = `${count}/128`;
+    };
+
+    contentInput.oninput = () => {
+        const count = contentInput.value.length;
+        contentInput.parentElement.querySelector('.character-count').textContent = `${count}/2048`;
+    };
+});
 
 // Initialize on load
 window.addEventListener('load', initializeApp);
