@@ -1,0 +1,81 @@
+body {
+    background: #1a1a1a;
+    color: #ffd700;
+    font-family: monospace;
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
+}
+
+#wallet-button {
+    background: #333;
+    color: #ffd700;
+    border: 1px solid #ffd700;
+    padding: 10px 20px;
+    cursor: pointer;
+}
+
+#wallet-button:hover {
+    background: #444;
+}
+
+#status-messages {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 10px;
+    border-radius: 5px;
+    display: none;
+}
+
+.status-message {
+    padding: 10px;
+    margin: 5px;
+    border-radius: 5px;
+}
+
+.error { background: #ff00004d; }
+.success { background: #00ff004d; }
+.warning { background: #ffff004d; }
+
+#content {
+    max-width: 800px;
+    width: 100%;
+    white-space: pre-wrap;
+    line-height: 1.6;
+}
+
+#choices {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.choice-button {
+    background: #333;
+    color: #ffd700;
+    border: 1px solid #ffd700;
+    padding: 15px 20px;
+    cursor: pointer;
+    text-align: left;
+    font-family: monospace;
+    max-width: 800px;
+    white-space: pre-wrap;
+    line-height: 1.4;
+}
+
+.choice-button:hover {
+    background: #444;
+}
