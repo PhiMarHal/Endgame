@@ -1,8 +1,10 @@
 
 // Global state
 let currentEntryId = 0;
-let contract;
-let provider;
+let readProvider;  // Always connected to zkSync Sepolia
+let readContract;  // Read-only contract instance
+let writeProvider; // Connected to wallet
+let writeContract; // Contract instance for transactions
 let signer;
 let userAddress;
 let dataCache = {
@@ -13,14 +15,12 @@ let dataCache = {
     processedTransactions: new Set()
 };
 
-// Initialize app
+// Update initializeApp
 async function initializeApp() {
     try {
-        console.log('Initializing app...');
-        // Set up read-only provider
-        provider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_URL);
-        contract = new ethers.Contract(CONFIG.CONTRACT_ADDRESS, CONFIG.CONTRACT_ABI, provider);
-        console.log('Contract initialized:', CONFIG.CONTRACT_ADDRESS);
+        // Set up read-only provider and contract
+        readProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_URL);
+        readContract = new ethers.Contract(CONFIG.CONTRACT_ADDRESS, CONFIG.CONTRACT_ABI, readProvider);
 
         // Set up wallet connection button
         const walletButton = document.getElementById('wallet-button');
@@ -41,8 +41,7 @@ async function initializeApp() {
         }
 
         // Start periodic data updates
-        console.log('Fetching initial data...');
-        await fetchLatestData();
+        fetchLatestData();
         startPeriodicUpdates();
 
     } catch (error) {
@@ -50,29 +49,20 @@ async function initializeApp() {
         showStatus(`Initialization error: ${error.message}`, 'error');
     }
 }
-// Fetch and display entry with its choices
+
+// Update fetchLatestData to use readContract
 async function fetchLatestData() {
     try {
-        console.log('Fetching entry:', currentEntryId);
-        const entry = await contract.getFullEntry(currentEntryId);
-        console.log('Got entry:', entry);
+        const entry = await readContract.getFullEntry(currentEntryId);
         await displayEntryAndChoices(entry);
         dataCache.lastUpdate = Date.now();
     } catch (error) {
         console.error('Error fetching data:', error);
         showStatus('Error fetching story data', 'error');
-        // Log the full error details
-        console.error('Full error:', {
-            message: error.message,
-            code: error.code,
-            error
-        });
     }
 }
 
-
-
-// Wallet Management
+// Update wallet connection to handle write provider separately
 async function connectWallet() {
     if (typeof window.ethereum === 'undefined') {
         showStatus('No Web3 wallet detected. Please install MetaMask or similar.', 'error');
@@ -87,9 +77,9 @@ async function connectWallet() {
             return false;
         }
 
-        const web3Provider = new ethers.providers.Web3Provider(window.ethereum);
-        signer = web3Provider.getSigner();
-        contract = new ethers.Contract(CONFIG.CONTRACT_ADDRESS, CONFIG.CONTRACT_ABI, signer);
+        writeProvider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = writeProvider.getSigner();
+        writeContract = new ethers.Contract(CONFIG.CONTRACT_ADDRESS, CONFIG.CONTRACT_ABI, signer);
 
         showStatus('Wallet connected successfully', 'success');
         updateWalletDisplay();
@@ -105,7 +95,8 @@ async function connectWallet() {
 function disconnectWallet() {
     userAddress = null;
     signer = null;
-    contract = new ethers.Contract(CONFIG.CONTRACT_ADDRESS, CONFIG.CONTRACT_ABI, provider);
+    writeProvider = null;
+    writeContract = null;
     updateWalletDisplay();
     showStatus('Wallet disconnected', 'success');
 }
@@ -239,9 +230,7 @@ function updateWalletDisplay() {
 }
 
 async function displayEntryAndChoices(fullEntry) {
-    console.log('Full entry:', fullEntry);
     const [origin, choice, content, end, next, score, author] = fullEntry;
-    console.log('Destructured data:', { origin, choice, content, end, next, score, author });
 
     // Display the entry content
     const contentDiv = document.getElementById('content');
@@ -251,13 +240,22 @@ async function displayEntryAndChoices(fullEntry) {
     const choicesDiv = document.getElementById('choices');
     choicesDiv.innerHTML = ''; // Clear existing choices
 
+    // If this is an ending, show the "Start Over" button
+    if (end) {
+        const startOverButton = document.createElement('button');
+        startOverButton.className = 'choice-button';
+        startOverButton.textContent = 'Start Over';
+        startOverButton.addEventListener('click', async () => {
+            currentEntryId = 0;
+            await fetchLatestData();
+        });
+        choicesDiv.appendChild(startOverButton);
+    }
+
     // For each next entry ID in the array
-    console.log('Next entries:', next);
     for (const nextId of next) {
         try {
-            console.log('Fetching entry:', nextId.toString());
-            const nextEntry = await contract.entries(nextId);
-            console.log('Got entry:', nextEntry);
+            const nextEntry = await readContract.entries(nextId);
 
             const choiceButton = document.createElement('button');
             choiceButton.className = 'choice-button';
@@ -300,9 +298,12 @@ function showStatus(message, type = 'info') {
     }, 5000);
 }
 
-// Event Handlers
+// Update chain change handler to only affect wallet connection
 function handleChainChange() {
-    window.location.reload();
+    // Only reconnect wallet if we were connected
+    if (userAddress) {
+        connectWallet();
+    }
 }
 
 function handleAccountsChanged(accounts) {
@@ -341,7 +342,7 @@ function hideContributionModal() {
     document.getElementById('is-ending').checked = false;
 }
 
-// Handle submission
+// Update submission to use writeContract
 async function submitContribution() {
     const choiceText = document.getElementById('choice-text').value;
     const contentText = document.getElementById('content-text').value;
@@ -359,7 +360,7 @@ async function submitContribution() {
     }
 
     try {
-        const tx = await contract.contribute(
+        const tx = await writeContract.contribute(
             currentEntryId,
             choiceText,
             contentText,
