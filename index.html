@@ -10,12 +10,18 @@
 </head>
 
 <body>
-    <!-- Previous content remains the same -->
     <div id="header">
         <h1>ENDGAME</h1>
-        <div>
+        <div id="nav-buttons">
+            <button class="nav-button active">Story</button>
+            <button class="nav-button">Money</button>
+            <button class="nav-button">Map</button>
+            <button class="nav-button">Yap</button>
+        </div>
+        <div id="wallet-section">
+            <button id="register-name" class="header-button" style="display: none;">Register Name</button>
             <span id="wallet-display">Not connected</span>
-            <button id="wallet-button">Connect Wallet</button>
+            <button id="wallet-button" class="header-button">Connect Wallet</button>
         </div>
     </div>
     <div id="status-messages"></div>
@@ -50,6 +56,23 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal for name registration -->
+    <div id="name-modal" class="modal">
+        <div class="modal-content">
+            <h2>Register Name</h2>
+            <div class="form-group">
+                <label for="name-input">Choose a name:</label>
+                <input type="text" id="name-input" maxlength="32" placeholder="Enter your name...">
+                <div class="character-count">0/32</div>
+            </div>
+            <div class="modal-buttons">
+                <button id="submit-name">Register</button>
+                <button id="cancel-name">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script src="config.js"></script>
     <script src="app.js"></script>
 </body>

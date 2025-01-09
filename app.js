@@ -7,13 +7,15 @@ let writeProvider; // Connected to wallet
 let writeContract; // Contract instance for transactions
 let signer;
 let userAddress;
+
 let dataCache = {
     lastUpdate: 0,
-    data: {},
-    version: 0,
+    entries: new Map(), // Store entries by ID
+    lastKnownBlock: 0,  // Track last block we checked for events
     pendingUpdates: new Set(),
     processedTransactions: new Set()
 };
+let discoveredEntries = new Set([0]); // Start with entry 0
 
 // Update initializeApp
 async function initializeApp() {
@@ -40,6 +42,9 @@ async function initializeApp() {
             window.ethereum.on('accountsChanged', handleAccountsChanged);
         }
 
+        // Set up event listener
+        setupEntryEventListener();
+
         // Start periodic data updates
         fetchLatestData();
         startPeriodicUpdates();
@@ -50,15 +55,147 @@ async function initializeApp() {
     }
 }
 
-// Update fetchLatestData to use readContract
+function normalizeId(id) {
+    return typeof id === 'object' && id.toNumber ? id.toNumber() : Number(id);
+}
+
 async function fetchLatestData() {
     try {
-        const entry = await readContract.getFullEntry(currentEntryId);
+        console.time('fetchLatestData');
+
+        const normalizedId = normalizeId(currentEntryId);
+
+        // Check cache first
+        let entry = dataCache.entries.get(normalizedId);
+        if (!entry) {
+            console.log('Cache miss for entry', normalizedId);
+            entry = await readContract.getFullEntry(currentEntryId);
+            dataCache.entries.set(normalizedId, entry);
+            discoveredEntries.add(normalizedId);
+        } else {
+            console.log('Cache hit for entry', normalizedId);
+        }
+
+        // Pre-fetch next entries AND their next entries
+        const [, , , end, next] = entry;
+        if (!end && Array.isArray(next)) {
+            for (const nextId of next) {
+                const normalizedNextId = normalizeId(nextId);
+                if (!discoveredEntries.has(normalizedNextId)) {
+                    console.log('Pre-fetching new entry', normalizedNextId);
+                    const nextEntry = await readContract.getFullEntry(nextId);
+                    dataCache.entries.set(normalizedNextId, nextEntry);
+                    discoveredEntries.add(normalizedNextId);
+
+                    // Pre-fetch the next level too
+                    const [, , , nextEnd, nextNext] = nextEntry;
+                    if (!nextEnd && Array.isArray(nextNext)) {
+                        for (const nextNextId of nextNext) {
+                            const normalizedNextNextId = normalizeId(nextNextId);
+                            if (!discoveredEntries.has(normalizedNextNextId)) {
+                                console.log('Pre-fetching second level entry', normalizedNextNextId);
+                                const nextNextEntry = await readContract.getFullEntry(nextNextId);
+                                dataCache.entries.set(normalizedNextNextId, nextNextEntry);
+                                discoveredEntries.add(normalizedNextNextId);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         await displayEntryAndChoices(entry);
         dataCache.lastUpdate = Date.now();
+        console.timeEnd('fetchLatestData');
     } catch (error) {
         console.error('Error fetching data:', error);
         showStatus('Error fetching story data', 'error');
+    }
+}
+
+async function displayEntryAndChoices(fullEntry) {
+    let origin, choice, content, end, next, score, author;
+
+    if (Array.isArray(fullEntry)) {
+        [origin, choice, content, end, next, score, author] = fullEntry;
+    } else {
+        ({ origin, choice, content, end, next, score, author } = fullEntry);
+    }
+
+    next = Array.isArray(next) ? next : [];
+
+    // Display the entry content
+    const contentDiv = document.getElementById('content');
+    contentDiv.textContent = content;
+
+    // Get and display choices
+    const choicesDiv = document.getElementById('choices');
+    choicesDiv.innerHTML = '';
+
+    // Add Get Back button if not at the start
+    if (currentEntryId !== 0) {
+        const backButton = document.createElement('button');
+        backButton.className = 'choice-button';
+        backButton.textContent = `Get Back (${normalizeId(origin)})`;
+        backButton.addEventListener('click', async () => {
+            currentEntryId = normalizeId(origin);
+            await fetchLatestData();
+        });
+        choicesDiv.appendChild(backButton);
+    }
+
+    // For each next entry ID in the array
+    for (const nextId of next) {
+        try {
+            // Use cached entry - it should already be pre-fetched by fetchLatestData
+            const normalizedNextId = normalizeId(nextId);
+            const nextEntry = dataCache.entries.get(normalizedNextId);
+            if (!nextEntry) {
+                console.warn(`Entry ${normalizedNextId} not found in cache - this shouldn't happen due to pre-fetching`);
+                continue;
+            }
+
+            const choiceButton = document.createElement('button');
+            choiceButton.className = 'choice-button';
+            choiceButton.textContent = `${Array.isArray(nextEntry) ? nextEntry[1] : nextEntry.choice} (${normalizedNextId})`;
+
+            choiceButton.addEventListener('click', async () => {
+                currentEntryId = normalizedNextId;
+                await fetchLatestData();
+            });
+
+            choicesDiv.appendChild(choiceButton);
+        } catch (error) {
+            console.error(`Error handling choice ${normalizedNextId}:`, error);
+        }
+    }
+
+    // Add contribution button if this isn't an ending
+    if (!end) {
+        const contributeButton = document.createElement('button');
+        contributeButton.id = 'contribute-button';
+        contributeButton.className = 'choice-button';
+        contributeButton.textContent = 'Add your own...';
+        contributeButton.onclick = showContributionModal;
+        choicesDiv.appendChild(contributeButton);
+    }
+}
+
+function setupEntryEventListener() {
+    if (readContract) {
+        const filter = readContract.filters.NewEntry();
+        readContract.on(filter, async (id, origin, choice, event) => {
+            // Clear cache for the origin entry since its 'next' array changed
+            dataCache.entries.delete(origin);
+            // Fetch the new entry
+            const newEntry = await readContract.getFullEntry(id);
+            dataCache.entries.set(id, newEntry);
+
+            // If we're currently viewing the origin, refresh the display
+            if (currentEntryId === origin.toNumber()) {
+                fetchLatestData();
+            }
+        });
     }
 }
 
@@ -100,6 +237,39 @@ function disconnectWallet() {
     updateWalletDisplay();
     showStatus('Wallet disconnected', 'success');
 }
+
+// Add these functions
+function showNameModal() {
+    const modal = document.getElementById('name-modal');
+    modal.style.display = 'block';
+}
+
+function hideNameModal() {
+    const modal = document.getElementById('name-modal');
+    modal.style.display = 'none';
+    document.getElementById('name-input').value = '';
+}
+
+async function registerName() {
+    const nameInput = document.getElementById('name-input').value.trim();
+    if (!nameInput) {
+        showStatus('Please enter a name', 'error');
+        return;
+    }
+
+    try {
+        const tx = await writeContract.register(nameInput);
+        showStatus('Registering name...', 'info');
+        await tx.wait();
+        showStatus('Name registered successfully!', 'success');
+        hideNameModal();
+        updateWalletDisplay(); // This will now hide the register button
+    } catch (error) {
+        console.error('Error registering name:', error);
+        showStatus(`Failed to register name: ${error.message}`, 'error');
+    }
+}
+
 
 // Network Management
 async function checkAndSwitchNetwork() {
@@ -218,71 +388,36 @@ function setupEventListener() {
 }
 
 // UI Updates
-function updateWalletDisplay() {
+async function updateWalletDisplay() {
     const walletDisplay = document.getElementById('wallet-display');
-    if (!walletDisplay) return;
+    const walletButton = document.getElementById('wallet-button');
+    const registerButton = document.getElementById('register-name');
+
+    if (!walletDisplay || !walletButton) return;
 
     if (userAddress) {
-        walletDisplay.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
-    } else {
-        walletDisplay.textContent = 'No wallet connected';
-    }
-}
+        walletButton.textContent = 'Disconnect Wallet';
 
-async function displayEntryAndChoices(fullEntry) {
-    const [origin, choice, content, end, next, score, author] = fullEntry;
-
-    // Display the entry content
-    const contentDiv = document.getElementById('content');
-    contentDiv.textContent = content;
-
-    // Get and display choices
-    const choicesDiv = document.getElementById('choices');
-    choicesDiv.innerHTML = ''; // Clear existing choices
-
-    // If this is an ending, show the "Start Over" button
-    if (end) {
-        const startOverButton = document.createElement('button');
-        startOverButton.className = 'choice-button';
-        startOverButton.textContent = 'Start Over';
-        startOverButton.addEventListener('click', async () => {
-            currentEntryId = 0;
-            await fetchLatestData();
-        });
-        choicesDiv.appendChild(startOverButton);
-    }
-
-    // For each next entry ID in the array
-    for (const nextId of next) {
+        // Check if user has a registered name
         try {
-            const nextEntry = await readContract.entries(nextId);
-
-            const choiceButton = document.createElement('button');
-            choiceButton.className = 'choice-button';
-            choiceButton.textContent = nextEntry.choice;
-
-            choiceButton.addEventListener('click', async () => {
-                currentEntryId = nextId;
-                await fetchLatestData();
-            });
-
-            choicesDiv.appendChild(choiceButton);
+            const name = await readContract.addressToName(userAddress);
+            if (name) {
+                walletDisplay.textContent = `${name} (${userAddress.slice(0, 6)}...${userAddress.slice(-4)})`;
+                registerButton.style.display = 'none';
+            } else {
+                walletDisplay.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
+                registerButton.style.display = 'block';
+            }
         } catch (error) {
-            console.error(`Error fetching choice ${nextId}:`, error);
+            console.error('Error fetching name:', error);
+            walletDisplay.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
         }
-    }
-
-    // Add contribution button if this isn't an ending
-    if (!end) {
-        const contributeButton = document.createElement('button');
-        contributeButton.id = 'contribute-button';
-        contributeButton.className = 'choice-button';
-        contributeButton.textContent = 'Add your own...';
-        contributeButton.onclick = showContributionModal;
-        choicesDiv.appendChild(contributeButton);
+    } else {
+        walletButton.textContent = 'Connect Wallet';
+        walletDisplay.textContent = 'Not connected';
+        registerButton.style.display = 'none';
     }
 }
-
 
 // Update the status display function to show the div
 function showStatus(message, type = 'info') {
@@ -397,6 +532,18 @@ document.addEventListener('DOMContentLoaded', () => {
     contentInput.oninput = () => {
         const count = contentInput.value.length;
         contentInput.parentElement.querySelector('.character-count').textContent = `${count}/2048`;
+    };
+
+    // Add name registration listeners
+    document.getElementById('register-name').onclick = showNameModal;
+    document.getElementById('cancel-name').onclick = hideNameModal;
+    document.getElementById('submit-name').onclick = registerName;
+
+    // Add character counter for name input
+    const nameInput = document.getElementById('name-input');
+    nameInput.oninput = () => {
+        const count = nameInput.value.length;
+        nameInput.parentElement.querySelector('.character-count').textContent = `${count}/32`;
     };
 });
 

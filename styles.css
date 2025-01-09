@@ -12,10 +12,43 @@ body {
 
 #header {
     width: 100%;
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     margin-bottom: 40px;
+    gap: 20px;
+}
+
+#nav-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.nav-button {
+    background: #333;
+    color: #ffd700;
+    border: 1px solid #ffd700;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-family: monospace;
+    transition: all 0.2s ease;
+}
+
+.nav-button:hover {
+    background: #444;
+}
+
+.nav-button.active {
+    background: #ffd700;
+    color: #1a1a1a;
+}
+
+#wallet-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: flex-end;
 }
 
 #wallet-button {
@@ -54,33 +87,58 @@ body {
     width: 100%;
     white-space: pre-wrap;
     line-height: 1.6;
+    background: #333;
+    padding: 20px;
+    border: 1px solid #ffd700;
+    border-radius: 4px;
+    margin-bottom: 40px;
 }
 
 #choices {
-    margin-top: 40px;
+    margin-top: 20px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 10px;
+    max-width: 800px;
+    width: 100%;
 }
 
 .choice-button {
-    background: #333;
+    background: none;
     color: #ffd700;
-    border: 1px solid #ffd700;
-    padding: 15px 20px;
+    border: none;
+    padding: 10px 0;
     cursor: pointer;
     text-align: left;
     font-family: monospace;
-    max-width: 800px;
+    width: 100%;
     white-space: pre-wrap;
     line-height: 1.4;
+    transition: color 0.2s;
 }
 
 .choice-button:hover {
+    color: #fff;
+}
+
+#wallet-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-button {
+    background: #333;
+    color: #ffd700;
+    border: 1px solid #ffd700;
+    padding: 10px 20px;
+    cursor: pointer;
+}
+
+.header-button:hover {
     background: #444;
 }
 
-/* Add to styles.css */
 .modal {
     display: none;
     position: fixed;
