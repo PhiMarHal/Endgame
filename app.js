@@ -144,29 +144,39 @@ async function displayEntryAndChoices(fullEntry) {
         choicesDiv.appendChild(backButton);
     }
 
+    // If this is an ending, show the Start Over button
+    if (end) {
+        const startOverButton = document.createElement('button');
+        startOverButton.className = 'choice-button';
+        startOverButton.textContent = 'Start Over';
+        startOverButton.addEventListener('click', async () => {
+            currentEntryId = 0;
+            await fetchLatestData();
+        });
+        choicesDiv.appendChild(startOverButton);
+    }
+
     // For each next entry ID in the array
     for (const nextId of next) {
         try {
-            // Use cached entry - it should already be pre-fetched by fetchLatestData
-            const normalizedNextId = normalizeId(nextId);
-            const nextEntry = dataCache.entries.get(normalizedNextId);
+            const nextEntry = dataCache.entries.get(normalizeId(nextId));
             if (!nextEntry) {
-                console.warn(`Entry ${normalizedNextId} not found in cache - this shouldn't happen due to pre-fetching`);
+                console.warn(`Entry ${nextId} not found in cache - this shouldn't happen due to pre-fetching`);
                 continue;
             }
 
             const choiceButton = document.createElement('button');
             choiceButton.className = 'choice-button';
-            choiceButton.textContent = `${Array.isArray(nextEntry) ? nextEntry[1] : nextEntry.choice} (${normalizedNextId})`;
+            choiceButton.textContent = `${Array.isArray(nextEntry) ? nextEntry[1] : nextEntry.choice} (${normalizeId(nextId)})`;
 
             choiceButton.addEventListener('click', async () => {
-                currentEntryId = normalizedNextId;
+                currentEntryId = normalizeId(nextId);
                 await fetchLatestData();
             });
 
             choicesDiv.appendChild(choiceButton);
         } catch (error) {
-            console.error(`Error handling choice ${normalizedNextId}:`, error);
+            console.error(`Error handling choice ${nextId}:`, error);
         }
     }
 
@@ -183,17 +193,33 @@ async function displayEntryAndChoices(fullEntry) {
 
 function setupEntryEventListener() {
     if (readContract) {
+        readContract.removeAllListeners("NewEntry");
+
         const filter = readContract.filters.NewEntry();
         readContract.on(filter, async (id, origin, choice, event) => {
+            console.log('New entry detected:', {
+                id: id.toNumber(),
+                origin: origin.toNumber(),
+                choice,
+                currentEntryId
+            });
+
             // Clear cache for the origin entry since its 'next' array changed
-            dataCache.entries.delete(origin);
+            dataCache.entries.delete(normalizeId(origin));
             // Fetch the new entry
             const newEntry = await readContract.getFullEntry(id);
-            dataCache.entries.set(id, newEntry);
+            dataCache.entries.set(normalizeId(id), newEntry);
 
             // If we're currently viewing the origin, refresh the display
             if (currentEntryId === origin.toNumber()) {
-                fetchLatestData();
+                console.log('Updating display for new entry');
+                showStatus('New entry added!', 'success');
+                try {
+                    await fetchLatestData();
+                    console.log('Display updated successfully');
+                } catch (error) {
+                    console.error('Error updating display:', error);
+                }
             }
         });
     }
