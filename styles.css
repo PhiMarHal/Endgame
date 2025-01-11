@@ -209,3 +209,74 @@ body {
 .modal-buttons button:hover {
     background: #444;
 }
+
+.view-section {
+    width: 100%;
+    max-width: 800px;
+}
+
+
+#sacrifice-button {
+    height: fit-content;
+    align-self: center;
+}
+
+.center-text {
+    text-align: center;
+}
+
+.balance-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.balance-section {
+    margin-top: auto;
+    width: 100%;
+}
+
+.auction-section, .balance-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
+    gap: 24px;  /* slightly increased gap */
+}
+
+.auction-box, .balance-box {
+    background: #333;
+    padding: 24px;  /* increased padding */
+    border: 1px solid #ffd700;
+    border-radius: 4px;
+    width: 240px;  /* fixed width for consistency */
+}
+
+.auction-box h3, .balance-box h3 {
+    margin: 0 0 12px 0;
+    color: #ffd700;
+    font-size: 1.2em;  /* bigger font */
+}
+
+#current-bid, #treasury-display, #token-balance, #ether-balance {
+    font-size: 1.2em;  /* bigger font */
+}
+
+.action-button {
+    background: #333;
+    color: #ffd700;
+    border: 1px solid #ffd700;
+    padding: 15px 30px;  /* increased padding */
+    cursor: pointer;
+    font-family: monospace;
+    height: fit-content;
+    align-self: center;
+    min-width: 180px;  /* increased width */
+    text-align: center;
+    font-size: 1.5em;  /* significantly bigger font */
+}
+
+.action-button:hover {
+    background: #444;
+}

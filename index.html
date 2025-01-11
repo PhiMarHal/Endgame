@@ -12,21 +12,52 @@
 <body>
     <div id="header">
         <h1>ENDGAME</h1>
-        <div id="nav-buttons">
-            <button class="nav-button active">Story</button>
-            <button class="nav-button">Money</button>
-            <button class="nav-button">Map</button>
-            <button class="nav-button">Yap</button>
-        </div>
+        <nav id="nav-buttons">
+            <button class="nav-button active" data-view="story">Story</button>
+            <button class="nav-button" data-view="money">Money</button>
+            <button class="nav-button" data-view="map">Map</button>
+            <button class="nav-button" data-view="yap">Yap</button>
+        </nav>
         <div id="wallet-section">
             <button id="register-name" class="header-button" style="display: none;">Register Name</button>
             <span id="wallet-display">Not connected</span>
             <button id="wallet-button" class="header-button">Connect Wallet</button>
         </div>
     </div>
-    <div id="status-messages"></div>
-    <div id="content"></div>
-    <div id="choices"></div>
+
+    <!-- Story View -->
+    <div id="story-view" class="view-section">
+        <div id="content"></div>
+        <div id="choices"></div>
+    </div>
+
+    <!-- Money View -->
+    <div id="money-view" class="view-section" style="display: none;">
+        <div class="auction-section">
+            <div class="auction-box">
+                <h3 class="center-text">Required Tokens</h3>
+                <div id="current-bid" class="center-text"></div>
+            </div>
+            <button id="sacrifice-button" class="action-button">SACRIFICE</button>
+            <div class="auction-box">
+                <h3 class="center-text">Auction Pot</h3>
+                <div id="treasury-display" class="center-text"></div>
+            </div>
+        </div>
+        <div class="balance-section">
+            <div class="balance-container">
+                <div class="balance-box">
+                    <h3 class="center-text">Your END</h3>
+                    <div id="token-balance" class="center-text"></div>
+                </div>
+                <button id="withdraw-button" class="action-button">WITHDRAW</button>
+                <div class="balance-box">
+                    <h3 class="center-text">Your ETH</h3>
+                    <div id="ether-balance" class="center-text"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal for contribution -->
     <div id="contribution-modal" class="modal">

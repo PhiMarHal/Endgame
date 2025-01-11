@@ -246,6 +246,7 @@ async function connectWallet() {
 
         showStatus('Wallet connected successfully', 'success');
         updateWalletDisplay();
+        updateMoneyData();
         return true;
 
     } catch (error) {
@@ -541,6 +542,65 @@ async function submitContribution() {
     }
 }
 
+// View Management
+function switchView(viewName) {
+    // Hide all views
+    document.querySelectorAll('.view-section').forEach(view => {
+        view.style.display = 'none';
+    });
+
+    // Show selected view
+    document.getElementById(`${viewName}-view`).style.display = 'block';
+
+    // Update nav buttons
+    document.querySelectorAll('.nav-button').forEach(button => {
+        button.classList.remove('active');
+        if (button.dataset.view === viewName) {
+            button.classList.add('active');
+        }
+    });
+
+    // If switching to money view, update the data
+    if (viewName === 'money') {
+        updateMoneyData();
+    }
+}
+
+// Money View Functions
+async function updateMoneyData() {
+    try {
+        // Get current bid
+        const currentBid = await readContract.getCurrentBid();
+        document.getElementById('current-bid').textContent =
+            `${ethers.utils.formatEther(currentBid)} END`;
+
+        // Get treasury balance and calculate pot
+        const treasury = await readContract.treasuryBalance();
+        const pot = treasury.div(10); // 10% of treasury
+        document.getElementById('treasury-display').textContent =
+            `${ethers.utils.formatEther(pot)} ETH`;
+
+        // Get user's balances if connected
+        if (userAddress) {
+            // Get ETH balance
+            const ethBalance = await readContract.etherBalance(userAddress);
+            document.getElementById('ether-balance').textContent =
+                `${ethers.utils.formatEther(ethBalance)} ETH`;
+
+            // Get END token balance
+            const tokenBalance = await readContract.balanceOf(userAddress);
+            document.getElementById('token-balance').textContent =
+                `${ethers.utils.formatEther(tokenBalance)} END`;
+        } else {
+            document.getElementById('ether-balance').textContent = 'Connect wallet to view';
+            document.getElementById('token-balance').textContent = 'Connect wallet to view';
+        }
+    } catch (error) {
+        console.error('Error updating money data:', error);
+        showStatus('Failed to update monetary information', 'error');
+    }
+}
+
 // Setup event listeners
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('cancel-entry').onclick = hideContributionModal;
@@ -571,6 +631,61 @@ document.addEventListener('DOMContentLoaded', () => {
         const count = nameInput.value.length;
         nameInput.parentElement.querySelector('.character-count').textContent = `${count}/32`;
     };
+
+    // Add view switching listeners
+    document.querySelectorAll('.nav-button').forEach(button => {
+        button.addEventListener('click', () => {
+            switchView(button.dataset.view);
+        });
+    });
+
+    document.getElementById('sacrifice-button').addEventListener('click', async () => {
+        if (!userAddress) {
+            showStatus('Please connect your wallet first', 'warning');
+            return;
+        }
+
+        try {
+            // Get current bid amount
+            const bidAmount = await readContract.getCurrentBid();
+
+            // Send the sacrifice transaction
+            const tx = await writeContract.sacrifice(bidAmount);
+            showStatus('Sacrifice transaction submitted...', 'info');
+            await tx.wait();
+            showStatus('Sacrifice successful!', 'success');
+
+            // Update the display
+            await updateMoneyData();
+        } catch (error) {
+            console.error('Sacrifice error:', error);
+            showStatus('Sacrifice failed: ' + error.message, 'error');
+        }
+    });
+
+    document.getElementById('withdraw-button').addEventListener('click', async () => {
+        if (!userAddress) {
+            showStatus('Please connect your wallet first', 'warning');
+            return;
+        }
+        try {
+            const tx = await writeContract.withdraw();
+            showStatus('Withdrawal initiated', 'info');
+            await tx.wait();
+            showStatus('Withdrawal successful', 'success');
+            await updateMoneyData();
+        } catch (error) {
+            console.error('Withdrawal error:', error);
+            showStatus('Withdrawal failed: ' + error.message, 'error');
+        }
+    });
+
+    // Set up periodic updates for money view
+    setInterval(() => {
+        if (document.getElementById('money-view').style.display !== 'none') {
+            updateMoneyData();
+        }
+    }, 60000); // Update every minute
 });
 
 // Initialize on load
