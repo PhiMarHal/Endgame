@@ -6,7 +6,7 @@ const CONFIG = {
     EXPLORER_URL: 'https://sepolia.explorer.zksync.io/',
 
     // Contract Configuration
-    CONTRACT_ADDRESS: '0xF6EBDe09AE8FAa70B5280B422A0573562BD3456A',
+    CONTRACT_ADDRESS: '0x2D270140Ef3C507b8f838FC29dB7e1Ad6181932A',
     CONTRACT_ABI: [
         {
             "inputs": [],
@@ -146,7 +146,20 @@ const CONFIG = {
                     "type": "uint256"
                 }
             ],
-            "name": "AuctionWon",
+            "name": "AuctioWon",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": true,
+                    "internalType": "uint256",
+                    "name": "id",
+                    "type": "uint256"
+                }
+            ],
+            "name": "CreatedNexus",
             "type": "event"
         },
         {
@@ -178,19 +191,19 @@ const CONFIG = {
                     "type": "uint256"
                 },
                 {
-                    "indexed": true,
+                    "indexed": false,
                     "internalType": "uint256",
                     "name": "origin",
                     "type": "uint256"
                 },
                 {
                     "indexed": false,
-                    "internalType": "string",
-                    "name": "choice",
-                    "type": "string"
+                    "internalType": "uint256",
+                    "name": "destination",
+                    "type": "uint256"
                 }
             ],
-            "name": "NewEntry",
+            "name": "LinkedOptio",
             "type": "event"
         },
         {
@@ -264,7 +277,7 @@ const CONFIG = {
         },
         {
             "inputs": [],
-            "name": "AUCTION_REWARD_PERCENTAGE",
+            "name": "AUCTIO_REWARD_PERCENTAGE",
             "outputs": [
                 {
                     "internalType": "uint256",
@@ -277,33 +290,7 @@ const CONFIG = {
         },
         {
             "inputs": [],
-            "name": "CHOICE_LENGTH",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "inputs": [],
-            "name": "CONTENT_LENGTH",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "inputs": [],
-            "name": "ENTRY_PRICE",
+            "name": "ENTRY_FEE",
             "outputs": [
                 {
                     "internalType": "uint256",
@@ -330,6 +317,32 @@ const CONFIG = {
         {
             "inputs": [],
             "name": "NAME_LENGTH",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "NEXUS_LENGTH",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "OPTIO_LENGTH",
             "outputs": [
                 {
                     "internalType": "uint256",
@@ -435,7 +448,7 @@ const CONFIG = {
         },
         {
             "inputs": [],
-            "name": "auctionStart",
+            "name": "auctioStart",
             "outputs": [
                 {
                     "internalType": "uint256",
@@ -473,19 +486,27 @@ const CONFIG = {
                     "type": "uint256"
                 },
                 {
-                    "internalType": "string",
-                    "name": "_choice",
-                    "type": "string"
+                    "internalType": "uint256",
+                    "name": "_dest",
+                    "type": "uint256"
                 },
                 {
                     "internalType": "string",
                     "name": "_content",
                     "type": "string"
-                },
+                }
+            ],
+            "name": "bind",
+            "outputs": [],
+            "stateMutability": "payable",
+            "type": "function"
+        },
+        {
+            "inputs": [
                 {
-                    "internalType": "bool",
-                    "name": "_end",
-                    "type": "bool"
+                    "internalType": "string",
+                    "name": "_content",
+                    "type": "string"
                 }
             ],
             "name": "contribute",
@@ -515,70 +536,7 @@ const CONFIG = {
         },
         {
             "inputs": [],
-            "name": "endings",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "inputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "name": "entries",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "origin",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "string",
-                    "name": "choice",
-                    "type": "string"
-                },
-                {
-                    "internalType": "string",
-                    "name": "content",
-                    "type": "string"
-                },
-                {
-                    "internalType": "bool",
-                    "name": "end",
-                    "type": "bool"
-                },
-                {
-                    "internalType": "int256",
-                    "name": "score",
-                    "type": "int256"
-                },
-                {
-                    "internalType": "address",
-                    "name": "author",
-                    "type": "address"
-                }
-            ],
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "",
-                    "type": "address"
-                }
-            ],
-            "name": "etherBalance",
+            "name": "fiscus",
             "outputs": [
                 {
                     "internalType": "uint256",
@@ -605,60 +563,66 @@ const CONFIG = {
         {
             "inputs": [
                 {
-                    "internalType": "uint256",
-                    "name": "_id",
-                    "type": "uint256"
+                    "internalType": "uint256[]",
+                    "name": "_ids",
+                    "type": "uint256[]"
                 }
             ],
-            "name": "getFullEntry",
+            "name": "getFullNexusBatch",
             "outputs": [
                 {
-                    "internalType": "uint256",
-                    "name": "origin",
-                    "type": "uint256"
+                    "internalType": "address[]",
+                    "name": "authors",
+                    "type": "address[]"
                 },
                 {
-                    "internalType": "string",
-                    "name": "choice",
-                    "type": "string"
+                    "internalType": "string[]",
+                    "name": "contents",
+                    "type": "string[]"
                 },
                 {
-                    "internalType": "string",
-                    "name": "content",
-                    "type": "string"
-                },
-                {
-                    "internalType": "bool",
-                    "name": "end",
-                    "type": "bool"
-                },
-                {
-                    "internalType": "uint256[]",
-                    "name": "next",
-                    "type": "uint256[]"
-                },
-                {
-                    "internalType": "int256",
-                    "name": "score",
-                    "type": "int256"
-                },
-                {
-                    "internalType": "address",
-                    "name": "author",
-                    "type": "address"
+                    "internalType": "uint256[][]",
+                    "name": "nexts",
+                    "type": "uint256[][]"
                 }
             ],
             "stateMutability": "view",
             "type": "function"
         },
         {
-            "inputs": [],
-            "name": "lastEntryId",
+            "inputs": [
+                {
+                    "internalType": "uint256[]",
+                    "name": "_ids",
+                    "type": "uint256[]"
+                }
+            ],
+            "name": "getFullOptioBatch",
             "outputs": [
                 {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
+                    "internalType": "address[]",
+                    "name": "authors",
+                    "type": "address[]"
+                },
+                {
+                    "internalType": "string[]",
+                    "name": "contents",
+                    "type": "string[]"
+                },
+                {
+                    "internalType": "uint256[]",
+                    "name": "origins",
+                    "type": "uint256[]"
+                },
+                {
+                    "internalType": "uint256[]",
+                    "name": "destinations",
+                    "type": "uint256[]"
+                },
+                {
+                    "internalType": "int256[]",
+                    "name": "scores",
+                    "type": "int256[]"
                 }
             ],
             "stateMutability": "view",
@@ -697,6 +661,95 @@ const CONFIG = {
             "type": "function"
         },
         {
+            "inputs": [],
+            "name": "nexusCount",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "name": "nexuses",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "author",
+                    "type": "address"
+                },
+                {
+                    "internalType": "string",
+                    "name": "content",
+                    "type": "string"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "optioCount",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "name": "optios",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "author",
+                    "type": "address"
+                },
+                {
+                    "internalType": "string",
+                    "name": "content",
+                    "type": "string"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "origin",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "destination",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "int256",
+                    "name": "score",
+                    "type": "int256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
             "inputs": [
                 {
                     "internalType": "string",
@@ -720,6 +773,25 @@ const CONFIG = {
             "name": "sacrifice",
             "outputs": [],
             "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "name": "summa",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
             "type": "function"
         },
         {
@@ -802,19 +874,6 @@ const CONFIG = {
             "type": "function"
         },
         {
-            "inputs": [],
-            "name": "treasuryBalance",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
             "inputs": [
                 {
                     "internalType": "address",
@@ -842,7 +901,7 @@ const CONFIG = {
             "inputs": [
                 {
                     "internalType": "uint256",
-                    "name": "_entryId",
+                    "name": "_id",
                     "type": "uint256"
                 },
                 {

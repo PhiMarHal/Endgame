@@ -1,19 +1,17 @@
 
 // Global state
-let currentEntryId = 0;
-let readProvider;  // Always connected to zkSync Sepolia
-let readContract;  // Read-only contract instance
-let writeProvider; // Connected to wallet
-let writeContract; // Contract instance for transactions
+let currentNexusId = 0;  // Changed from currentEntryId
+let readProvider;
+let readContract;
+let writeProvider;
+let writeContract;
 let signer;
 let userAddress;
-
 let dataCache = {
     lastUpdate: 0,
-    entries: new Map(), // Store entries by ID
-    lastKnownBlock: 0,  // Track last block we checked for events
-    pendingUpdates: new Set(),
-    processedTransactions: new Set()
+    nexuses: new Map(),
+    optios: new Map(),
+    pendingUpdates: new Set()
 };
 let discoveredEntries = new Set([0]); // Start with entry 0
 
@@ -61,55 +59,204 @@ function normalizeId(id) {
 
 async function fetchLatestData() {
     try {
-        console.time('fetchLatestData');
-
-        const normalizedId = normalizeId(currentEntryId);
-
-        // Check cache first
-        let entry = dataCache.entries.get(normalizedId);
-        if (!entry) {
-            console.log('Cache miss for entry', normalizedId);
-            entry = await readContract.getFullEntry(currentEntryId);
-            dataCache.entries.set(normalizedId, entry);
-            discoveredEntries.add(normalizedId);
-        } else {
-            console.log('Cache hit for entry', normalizedId);
-        }
-
-        // Pre-fetch next entries AND their next entries
-        const [, , , end, next] = entry;
-        if (!end && Array.isArray(next)) {
-            for (const nextId of next) {
-                const normalizedNextId = normalizeId(nextId);
-                if (!discoveredEntries.has(normalizedNextId)) {
-                    console.log('Pre-fetching new entry', normalizedNextId);
-                    const nextEntry = await readContract.getFullEntry(nextId);
-                    dataCache.entries.set(normalizedNextId, nextEntry);
-                    discoveredEntries.add(normalizedNextId);
-
-                    // Pre-fetch the next level too
-                    const [, , , nextEnd, nextNext] = nextEntry;
-                    if (!nextEnd && Array.isArray(nextNext)) {
-                        for (const nextNextId of nextNext) {
-                            const normalizedNextNextId = normalizeId(nextNextId);
-                            if (!discoveredEntries.has(normalizedNextNextId)) {
-                                console.log('Pre-fetching second level entry', normalizedNextNextId);
-                                const nextNextEntry = await readContract.getFullEntry(nextNextId);
-                                dataCache.entries.set(normalizedNextNextId, nextNextEntry);
-                                discoveredEntries.add(normalizedNextNextId);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        await displayEntryAndChoices(entry);
+        const data = await fetchNexusAndOptionsData(currentNexusId);
+        await displayNexusAndOptios(data);
         dataCache.lastUpdate = Date.now();
-        console.timeEnd('fetchLatestData');
     } catch (error) {
         console.error('Error fetching data:', error);
         showStatus('Error fetching story data', 'error');
+    }
+}
+
+function showNexusModal() {
+    const modal = document.getElementById('nexus-modal');
+    modal.style.display = 'block';
+}
+
+function hideNexusModal() {
+    const modal = document.getElementById('nexus-modal');
+    modal.style.display = 'none';
+    document.getElementById('nexus-content').value = '';
+}
+
+function showOptioModal() {
+    const modal = document.getElementById('optio-modal');
+    modal.style.display = 'block';
+}
+
+function hideOptioModal() {
+    const modal = document.getElementById('optio-modal');
+    modal.style.display = 'none';
+    document.getElementById('optio-content').value = '';
+    document.getElementById('destination-id').value = '';
+}
+
+async function displayNexusAndOptios(data) {
+    try {
+        // Display nexus content
+        const contentDiv = document.getElementById('content');
+        contentDiv.textContent = data.nexus.content;
+
+        // Get and display optios
+        const choicesDiv = document.getElementById('choices');
+        choicesDiv.innerHTML = '';
+
+        // Add Get Back button if not at the start
+        if (currentNexusId !== 0) {
+            // We'll need to implement this later when we track navigation history
+        }
+
+        // Display each optio
+        for (const optio of data.optios) {
+            const choiceButton = document.createElement('button');
+            choiceButton.className = 'choice-button';
+            choiceButton.textContent = `${optio.content} (${optio.id} → ${optio.destination})`;
+
+            choiceButton.addEventListener('click', async () => {
+                currentNexusId = optio.destination;
+                await fetchLatestData();
+            });
+
+            choicesDiv.appendChild(choiceButton);
+        }
+
+        // Add contribution buttons
+        const createNexusButton = document.createElement('button');
+        createNexusButton.className = 'choice-button';
+        createNexusButton.textContent = 'Create New Nexus...';
+        createNexusButton.onclick = showNexusModal;
+        choicesDiv.appendChild(createNexusButton);
+
+        const createOptioButton = document.createElement('button');
+        createOptioButton.className = 'choice-button';
+        createOptioButton.textContent = 'Link Nexuses...';
+        createOptioButton.onclick = showOptioModal;
+        choicesDiv.appendChild(createOptioButton);
+
+    } catch (error) {
+        console.error('Error displaying nexus:', error);
+        showStatus('Error displaying content', 'error');
+    }
+}
+
+async function submitNexus() {
+    const content = document.getElementById('nexus-content').value;
+
+    if (!content) {
+        showStatus('Please fill in the content', 'error');
+        return;
+    }
+
+    if (!userAddress) {
+        const connected = await connectWallet();
+        if (!connected) return;
+    }
+
+    try {
+        const tx = await writeContract.contribute(
+            content,
+            { value: ethers.utils.parseEther("0.00004") }
+        );
+
+        showStatus('Transaction submitted! Waiting for confirmation...', 'info');
+        await tx.wait();
+        showStatus('Nexus created successfully!', 'success');
+        hideNexusModal();
+        await fetchLatestData();
+
+    } catch (error) {
+        console.error('Error submitting nexus:', error);
+        showStatus(`Failed to submit nexus: ${error.message}`, 'error');
+    }
+}
+
+async function submitOptio() {
+    const content = document.getElementById('optio-content').value;
+    const destId = document.getElementById('destination-id').value;
+
+    if (!content || !destId) {
+        showStatus('Please fill in all fields', 'error');
+        return;
+    }
+
+    if (!userAddress) {
+        const connected = await connectWallet();
+        if (!connected) return;
+    }
+
+    try {
+        const tx = await writeContract.bind(
+            currentNexusId,
+            destId,
+            content,
+            { value: ethers.utils.parseEther("0.00004") }
+        );
+
+        showStatus('Transaction submitted! Waiting for confirmation...', 'info');
+        await tx.wait();
+        showStatus('Link created successfully!', 'success');
+        hideOptioModal();
+        await fetchLatestData();
+
+    } catch (error) {
+        console.error('Error creating link:', error);
+        showStatus(`Failed to create link: ${error.message}`, 'error');
+    }
+}
+
+async function fetchNexusAndOptionsData(nexusId) {
+    try {
+        // Get the nexus first to get its optio IDs
+        const nexusData = await readContract.getFullNexusBatch([nexusId]);
+        const [authors, contents, nexts] = nexusData;
+
+        let optiosData = []; // Initialize empty array for optios
+
+        // If this nexus has optios, fetch them all at once
+        if (nexts[0] && nexts[0].length > 0) {
+            const optioData = await readContract.getFullOptioBatch(nexts[0]);
+            const [optioAuthors, optioContents, origins, destinations, scores] = optioData;
+
+            // Map the optio data
+            optiosData = nexts[0].map((optioId, index) => ({
+                id: optioId,
+                author: optioAuthors[index],
+                content: optioContents[index],
+                origin: origins[index],
+                destination: destinations[index],
+                score: scores[index]
+            }));
+
+            // Store in cache
+            nexts[0].forEach((optioId, index) => {
+                dataCache.optios.set(optioId, {
+                    author: optioAuthors[index],
+                    content: optioContents[index],
+                    origin: origins[index],
+                    destination: destinations[index],
+                    score: scores[index]
+                });
+            });
+        }
+
+        // Store nexus in cache
+        dataCache.nexuses.set(nexusId, {
+            author: authors[0],
+            content: contents[0],
+            next: nexts[0]
+        });
+
+        return {
+            nexus: {
+                author: authors[0],
+                content: contents[0],
+                next: nexts[0]
+            },
+            optios: optiosData
+        };
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        throw error;
     }
 }
 
@@ -133,12 +280,12 @@ async function displayEntryAndChoices(fullEntry) {
     choicesDiv.innerHTML = '';
 
     // Add Get Back button if not at the start
-    if (currentEntryId !== 0) {
+    if (currentNexusId !== 0) {
         const backButton = document.createElement('button');
         backButton.className = 'choice-button';
         backButton.textContent = `Get Back (${normalizeId(origin)})`;
         backButton.addEventListener('click', async () => {
-            currentEntryId = normalizeId(origin);
+            currentNexusId = normalizeId(origin);
             await fetchLatestData();
         });
         choicesDiv.appendChild(backButton);
@@ -150,7 +297,7 @@ async function displayEntryAndChoices(fullEntry) {
         startOverButton.className = 'choice-button';
         startOverButton.textContent = 'Start Over';
         startOverButton.addEventListener('click', async () => {
-            currentEntryId = 0;
+            currentNexusId = 0;
             await fetchLatestData();
         });
         choicesDiv.appendChild(startOverButton);
@@ -170,7 +317,7 @@ async function displayEntryAndChoices(fullEntry) {
             choiceButton.textContent = `${Array.isArray(nextEntry) ? nextEntry[1] : nextEntry.choice} (${normalizeId(nextId)})`;
 
             choiceButton.addEventListener('click', async () => {
-                currentEntryId = normalizeId(nextId);
+                currentNexusId = normalizeId(nextId);
                 await fetchLatestData();
             });
 
@@ -193,33 +340,35 @@ async function displayEntryAndChoices(fullEntry) {
 
 function setupEntryEventListener() {
     if (readContract) {
-        readContract.removeAllListeners("NewEntry");
+        // Listen for new nexuses
+        const nexusFilter = readContract.filters.CreatedNexus();
+        readContract.on(nexusFilter, async (id, event) => {
+            console.log('New nexus created:', id.toNumber());
 
-        const filter = readContract.filters.NewEntry();
-        readContract.on(filter, async (id, origin, choice, event) => {
-            console.log('New entry detected:', {
+            // Clear cache entry if it exists
+            dataCache.nexuses.delete(id);
+
+            // If we want to refresh the current view when any new nexus is created
+            // await fetchLatestData();
+        });
+
+        // Listen for new optios
+        const optioFilter = readContract.filters.LinkedOptio();
+        readContract.on(optioFilter, async (id, origin, destination, event) => {
+            console.log('New optio created:', {
                 id: id.toNumber(),
                 origin: origin.toNumber(),
-                choice,
-                currentEntryId
+                destination: destination.toNumber()
             });
 
-            // Clear cache for the origin entry since its 'next' array changed
-            dataCache.entries.delete(normalizeId(origin));
-            // Fetch the new entry
-            const newEntry = await readContract.getFullEntry(id);
-            dataCache.entries.set(normalizeId(id), newEntry);
+            // Clear cache for the origin nexus since its 'next' array changed
+            dataCache.nexuses.delete(origin);
+            dataCache.optios.delete(id);
 
             // If we're currently viewing the origin, refresh the display
-            if (currentEntryId === origin.toNumber()) {
-                console.log('Updating display for new entry');
-                showStatus('New entry added!', 'success');
-                try {
-                    await fetchLatestData();
-                    console.log('Display updated successfully');
-                } catch (error) {
-                    console.error('Error updating display:', error);
-                }
+            if (currentNexusId === origin.toNumber()) {
+                showStatus('New path added!', 'success');
+                await fetchLatestData();
             }
         });
     }
@@ -523,7 +672,7 @@ async function submitContribution() {
 
     try {
         const tx = await writeContract.contribute(
-            currentEntryId,
+            currentNexusId,
             choiceText,
             contentText,
             isEnding,
@@ -544,13 +693,19 @@ async function submitContribution() {
 
 // View Management
 function switchView(viewName) {
+    console.log('switchView called with:', viewName);
+
     // Hide all views
     document.querySelectorAll('.view-section').forEach(view => {
         view.style.display = 'none';
     });
 
     // Show selected view
-    document.getElementById(`${viewName}-view`).style.display = 'block';
+    const selectedView = document.getElementById(`${viewName}-view`);
+    console.log('Selected view element:', selectedView);
+    if (selectedView) {
+        selectedView.style.display = 'block';
+    }
 
     // Update nav buttons
     document.querySelectorAll('.nav-button').forEach(button => {
@@ -562,6 +717,7 @@ function switchView(viewName) {
 
     // If switching to money view, update the data
     if (viewName === 'money') {
+        console.log('Updating money data');
         updateMoneyData();
     }
 }
@@ -575,7 +731,7 @@ async function updateMoneyData() {
             `${ethers.utils.formatEther(currentBid)} END`;
 
         // Get treasury balance and calculate pot
-        const treasury = await readContract.treasuryBalance();
+        const treasury = await readContract.fiscus();  // Changed from treasuryBalance
         const pot = treasury.div(10); // 10% of treasury
         document.getElementById('treasury-display').textContent =
             `${ethers.utils.formatEther(pot)} ETH`;
@@ -583,7 +739,7 @@ async function updateMoneyData() {
         // Get user's balances if connected
         if (userAddress) {
             // Get ETH balance
-            const ethBalance = await readContract.etherBalance(userAddress);
+            const ethBalance = await readContract.summa(userAddress);  // Changed from etherBalance
             document.getElementById('ether-balance').textContent =
                 `${ethers.utils.formatEther(ethBalance)} ETH`;
 
@@ -603,89 +759,42 @@ async function updateMoneyData() {
 
 // Setup event listeners
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('cancel-entry').onclick = hideContributionModal;
-    document.getElementById('submit-entry').onclick = submitContribution;
-
-    // Add character counters
-    const choiceInput = document.getElementById('choice-text');
-    const contentInput = document.getElementById('content-text');
-
-    choiceInput.oninput = () => {
-        const count = choiceInput.value.length;
-        choiceInput.parentElement.querySelector('.character-count').textContent = `${count}/128`;
-    };
-
-    contentInput.oninput = () => {
-        const count = contentInput.value.length;
-        contentInput.parentElement.querySelector('.character-count').textContent = `${count}/2048`;
-    };
-
-    // Add name registration listeners
-    document.getElementById('register-name').onclick = showNameModal;
-    document.getElementById('cancel-name').onclick = hideNameModal;
-    document.getElementById('submit-name').onclick = registerName;
-
-    // Add character counter for name input
-    const nameInput = document.getElementById('name-input');
-    nameInput.oninput = () => {
-        const count = nameInput.value.length;
-        nameInput.parentElement.querySelector('.character-count').textContent = `${count}/32`;
-    };
-
     // Add view switching listeners
     document.querySelectorAll('.nav-button').forEach(button => {
         button.addEventListener('click', () => {
+            console.log('Switching to view:', button.dataset.view); // Debug log
             switchView(button.dataset.view);
         });
     });
 
-    document.getElementById('sacrifice-button').addEventListener('click', async () => {
-        if (!userAddress) {
-            showStatus('Please connect your wallet first', 'warning');
-            return;
-        }
+    // Make sure elements exist before binding
+    const cancelNexusButton = document.getElementById('cancel-nexus');
+    const submitNexusButton = document.getElementById('submit-nexus');
+    const cancelOptioButton = document.getElementById('cancel-optio');
+    const submitOptioButton = document.getElementById('submit-optio');
 
-        try {
-            // Get current bid amount
-            const bidAmount = await readContract.getCurrentBid();
+    if (cancelNexusButton) cancelNexusButton.onclick = hideNexusModal;
+    if (submitNexusButton) submitNexusButton.onclick = submitNexus;
+    if (cancelOptioButton) cancelOptioButton.onclick = hideOptioModal;
+    if (submitOptioButton) submitOptioButton.onclick = submitOptio;
 
-            // Send the sacrifice transaction
-            const tx = await writeContract.sacrifice(bidAmount);
-            showStatus('Sacrifice transaction submitted...', 'info');
-            await tx.wait();
-            showStatus('Sacrifice successful!', 'success');
+    // Add character counters
+    const nexusContent = document.getElementById('nexus-content');
+    const optioContent = document.getElementById('optio-content');
 
-            // Update the display
-            await updateMoneyData();
-        } catch (error) {
-            console.error('Sacrifice error:', error);
-            showStatus('Sacrifice failed: ' + error.message, 'error');
-        }
-    });
+    if (nexusContent) {
+        nexusContent.oninput = () => {
+            const count = nexusContent.value.length;
+            nexusContent.parentElement.querySelector('.character-count').textContent = `${count}/2048`;
+        };
+    }
 
-    document.getElementById('withdraw-button').addEventListener('click', async () => {
-        if (!userAddress) {
-            showStatus('Please connect your wallet first', 'warning');
-            return;
-        }
-        try {
-            const tx = await writeContract.withdraw();
-            showStatus('Withdrawal initiated', 'info');
-            await tx.wait();
-            showStatus('Withdrawal successful', 'success');
-            await updateMoneyData();
-        } catch (error) {
-            console.error('Withdrawal error:', error);
-            showStatus('Withdrawal failed: ' + error.message, 'error');
-        }
-    });
-
-    // Set up periodic updates for money view
-    setInterval(() => {
-        if (document.getElementById('money-view').style.display !== 'none') {
-            updateMoneyData();
-        }
-    }, 60000); // Update every minute
+    if (optioContent) {
+        optioContent.oninput = () => {
+            const count = optioContent.value.length;
+            optioContent.parentElement.querySelector('.character-count').textContent = `${count}/2048`;
+        };
+    }
 });
 
 // Initialize on load

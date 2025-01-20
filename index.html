@@ -59,31 +59,38 @@
         </div>
     </div>
 
-    <!-- Modal for contribution -->
-    <div id="contribution-modal" class="modal">
+    <!-- Nexus creation modal -->
+    <div id="nexus-modal" class="modal">
         <div class="modal-content">
-            <h2>Add New Entry</h2>
+            <h2>Create New Nexus</h2>
             <div class="form-group">
-                <label for="choice-text">Choice text (how to get here):</label>
-                <input type="text" id="choice-text" maxlength="128"
-                    placeholder="Enter the choice text that leads here...">
-                <div class="character-count">0/128</div>
+                <label for="nexus-content">Content:</label>
+                <textarea id="nexus-content" maxlength="2048" rows="6"></textarea>
+                <div class="character-count">0/2048</div>
             </div>
+            <div class="modal-buttons">
+                <button id="submit-nexus">Submit (0.00004 ETH)</button>
+                <button id="cancel-nexus">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Optio creation modal -->
+    <div id="optio-modal" class="modal">
+        <div class="modal-content">
+            <h2>Link Nexuses</h2>
             <div class="form-group">
-                <label for="content-text">Entry content:</label>
-                <textarea id="content-text" maxlength="2048" rows="6"
-                    placeholder="Enter the story content..."></textarea>
+                <label for="optio-content">Choice Text:</label>
+                <textarea id="optio-content" maxlength="2048" rows="6"></textarea>
                 <div class="character-count">0/2048</div>
             </div>
             <div class="form-group">
-                <label>
-                    <input type="checkbox" id="is-ending">
-                    This is an ending
-                </label>
+                <label for="destination-id">Destination Nexus ID:</label>
+                <input type="number" id="destination-id" min="0">
             </div>
             <div class="modal-buttons">
-                <button id="submit-entry">Submit (0.0001 ETH)</button>
-                <button id="cancel-entry">Cancel</button>
+                <button id="submit-optio">Submit (0.00004 ETH)</button>
+                <button id="cancel-optio">Cancel</button>
             </div>
         </div>
     </div>
