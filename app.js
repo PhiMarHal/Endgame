@@ -795,6 +795,62 @@ document.addEventListener('DOMContentLoaded', () => {
             optioContent.parentElement.querySelector('.character-count').textContent = `${count}/2048`;
         };
     }
+
+    // Add money view action listeners
+    document.getElementById('sacrifice-button').addEventListener('click', async () => {
+        if (!userAddress) {
+            showStatus('Please connect your wallet first', 'warning');
+            return;
+        }
+
+        try {
+            // Get current bid amount
+            const bidAmount = await readContract.getCurrentBid();
+
+            // Send the sacrifice transaction
+            const tx = await writeContract.sacrifice(bidAmount);
+            showStatus('Sacrifice transaction submitted...', 'info');
+            await tx.wait();
+            showStatus('Sacrifice successful!', 'success');
+
+            // Update the display
+            await updateMoneyData();
+        } catch (error) {
+            console.error('Sacrifice error:', error);
+            showStatus('Sacrifice failed: ' + error.message, 'error');
+        }
+    });
+
+    document.getElementById('withdraw-button').addEventListener('click', async () => {
+        if (!userAddress) {
+            showStatus('Please connect your wallet first', 'warning');
+            return;
+        }
+        try {
+            const tx = await writeContract.withdraw();
+            showStatus('Withdrawal initiated', 'info');
+            await tx.wait();
+            showStatus('Withdrawal successful', 'success');
+            await updateMoneyData();
+        } catch (error) {
+            console.error('Withdrawal error:', error);
+            showStatus('Withdrawal failed: ' + error.message, 'error');
+        }
+    });
+
+    // Name registration listeners
+    document.getElementById('register-name').addEventListener('click', showNameModal);
+    document.getElementById('cancel-name').addEventListener('click', hideNameModal);
+    document.getElementById('submit-name').addEventListener('click', registerName);
+
+    // Add name input character counter
+    const nameInput = document.getElementById('name-input');
+    if (nameInput) {
+        nameInput.oninput = () => {
+            const count = nameInput.value.length;
+            nameInput.parentElement.querySelector('.character-count').textContent = `${count}/32`;
+        };
+    }
 });
 
 // Initialize on load
