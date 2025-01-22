@@ -15,6 +15,12 @@ let dataCache = {
 };
 let discoveredEntries = new Set([0]); // Start with entry 0
 
+let paths = [{
+    nexuses: [0],  // First path starts at nexus 0
+    optios: []     // No optios selected yet
+}];
+let currentPathIndex = 0;  // Track which path we're on
+
 // Update initializeApp
 async function initializeApp() {
     try {
@@ -51,6 +57,27 @@ async function initializeApp() {
         console.error('Initialization error:', error);
         showStatus(`Initialization error: ${error.message}`, 'error');
     }
+}
+
+// Function to add to current path
+function addToPath(nexusId, optioId) {
+    const currentPath = paths[currentPathIndex];
+    currentPath.nexuses.push(nexusId);
+    if (optioId !== undefined) {
+        currentPath.optios.push(optioId);
+    }
+}
+
+// Function to start new path from a specific point
+function branchPath(fromNexusIndex) {
+    const currentPath = paths[currentPathIndex];
+    // Create new path up to the branching point
+    const newPath = {
+        nexuses: currentPath.nexuses.slice(0, fromNexusIndex + 1),
+        optios: currentPath.optios.slice(0, fromNexusIndex)
+    };
+    paths.push(newPath);
+    currentPathIndex = paths.length - 1;
 }
 
 function normalizeId(id) {
@@ -93,32 +120,53 @@ function hideOptioModal() {
 
 async function displayNexusAndOptios(data) {
     try {
-        // Display nexus content
         const contentDiv = document.getElementById('content');
         contentDiv.textContent = data.nexus.content;
 
-        // Get and display optios
         const choicesDiv = document.getElementById('choices');
         choicesDiv.innerHTML = '';
 
-        // Add Get Back button if not at the start
-        if (currentNexusId !== 0) {
-            // We'll need to implement this later when we track navigation history
+        // Add Back button if we're not at the start of the path
+        const currentPath = paths[currentPathIndex];
+        const currentPosition = currentPath.nexuses.indexOf(currentNexusId);
+
+        if (currentPosition > 0) {
+            const previousNexusId = currentPath.nexuses[currentPosition - 1];
+            const backButton = document.createElement('button');
+            backButton.className = 'choice-button';
+            backButton.textContent = 'GET BACK';
+            backButton.addEventListener('click', async () => {
+                // If we're not at the latest point in the path
+                if (currentPosition < currentPath.nexuses.length - 1) {
+                    // Start a new branch
+                    branchPath(currentPosition - 1);
+                }
+                currentNexusId = previousNexusId;
+                await fetchLatestData();
+            });
+            choicesDiv.appendChild(backButton);
         }
 
-        // Display each optio
+        // Display optios and update path when clicked
         for (const optio of data.optios) {
             const choiceButton = document.createElement('button');
             choiceButton.className = 'choice-button';
             choiceButton.textContent = `${optio.content} (${optio.id} → ${optio.destination})`;
 
             choiceButton.addEventListener('click', async () => {
+                // If we're not at the end of the current path, create a new branch
+                if (currentPosition < currentPath.nexuses.length - 1) {
+                    branchPath(currentPosition);
+                }
+
                 currentNexusId = optio.destination;
+                addToPath(optio.destination, optio.id);
                 await fetchLatestData();
             });
 
             choicesDiv.appendChild(choiceButton);
         }
+
 
         // Add contribution buttons
         const createNexusButton = document.createElement('button');
@@ -206,18 +254,43 @@ async function submitOptio() {
 
 async function fetchNexusAndOptionsData(nexusId) {
     try {
-        // Get the nexus first to get its optio IDs
+        // Check cache first
+        const cachedNexus = dataCache.nexuses.get(nexusId);
+        if (cachedNexus) {
+            console.log('Cache hit for nexus:', nexusId);
+            // Get cached optios for this nexus
+            const optiosData = [];
+            for (const optioId of cachedNexus.next) {
+                const cachedOptio = dataCache.optios.get(optioId);
+                if (cachedOptio) {
+                    optiosData.push({
+                        id: optioId,
+                        ...cachedOptio
+                    });
+                }
+            }
+
+            // Only fetch from blockchain if we're missing any optios
+            if (optiosData.length === cachedNexus.next.length) {
+                console.log('Using fully cached data');
+                return {
+                    nexus: cachedNexus,
+                    optios: optiosData
+                };
+            }
+        }
+
+        // If not in cache or missing optios, fetch from blockchain
+        console.log('Fetching from blockchain for nexus:', nexusId);
         const nexusData = await readContract.getFullNexusBatch([nexusId]);
         const [authors, contents, nexts] = nexusData;
 
-        let optiosData = []; // Initialize empty array for optios
+        let optiosData = [];
 
-        // If this nexus has optios, fetch them all at once
         if (nexts[0] && nexts[0].length > 0) {
             const optioData = await readContract.getFullOptioBatch(nexts[0]);
             const [optioAuthors, optioContents, origins, destinations, scores] = optioData;
 
-            // Map the optio data
             optiosData = nexts[0].map((optioId, index) => ({
                 id: optioId,
                 author: optioAuthors[index],
@@ -227,7 +300,7 @@ async function fetchNexusAndOptionsData(nexusId) {
                 score: scores[index]
             }));
 
-            // Store in cache
+            // Update cache
             nexts[0].forEach((optioId, index) => {
                 dataCache.optios.set(optioId, {
                     author: optioAuthors[index],
@@ -239,19 +312,17 @@ async function fetchNexusAndOptionsData(nexusId) {
             });
         }
 
-        // Store nexus in cache
-        dataCache.nexuses.set(nexusId, {
+        const nexus = {
             author: authors[0],
             content: contents[0],
             next: nexts[0]
-        });
+        };
+
+        // Update cache
+        dataCache.nexuses.set(nexusId, nexus);
 
         return {
-            nexus: {
-                author: authors[0],
-                content: contents[0],
-                next: nexts[0]
-            },
+            nexus,
             optios: optiosData
         };
     } catch (error) {
