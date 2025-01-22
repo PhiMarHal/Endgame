@@ -109,13 +109,38 @@ function hideNexusModal() {
 function showOptioModal() {
     const modal = document.getElementById('optio-modal');
     modal.style.display = 'block';
+
+    // Populate select with known nexuses
+    const select = document.getElementById('destination-select');
+    select.innerHTML = '';
+
+    // Get unique nexuses from all paths
+    const knownNexuses = new Set();
+    paths.forEach(path => {
+        path.nexuses.forEach(nexusId => knownNexuses.add(nexusId));
+    });
+
+    // Add options to select
+    knownNexuses.forEach(nexusId => {
+        const nexus = dataCache.nexuses.get(nexusId);
+        if (nexus) {
+            const option = document.createElement('option');
+            option.value = nexusId;
+            // Take first 50 chars of content as preview
+            option.textContent = `Nexus ${nexusId}: ${nexus.content.substring(0, 50)}...`;
+            select.appendChild(option);
+        }
+    });
 }
 
 function hideOptioModal() {
     const modal = document.getElementById('optio-modal');
-    modal.style.display = 'none';
-    document.getElementById('optio-content').value = '';
-    document.getElementById('destination-id').value = '';
+    const optioContent = document.getElementById('optio-content');
+    const nexusContent = document.getElementById('nexus-content');
+
+    if (modal) modal.style.display = 'none';
+    if (optioContent) optioContent.value = '';
+    if (nexusContent) nexusContent.value = '';
 }
 
 async function displayNexusAndOptios(data) {
@@ -169,15 +194,9 @@ async function displayNexusAndOptios(data) {
 
 
         // Add contribution buttons
-        const createNexusButton = document.createElement('button');
-        createNexusButton.className = 'choice-button';
-        createNexusButton.textContent = 'Create New Nexus...';
-        createNexusButton.onclick = showNexusModal;
-        choicesDiv.appendChild(createNexusButton);
-
         const createOptioButton = document.createElement('button');
         createOptioButton.className = 'choice-button';
-        createOptioButton.textContent = 'Link Nexuses...';
+        createOptioButton.textContent = 'CREATE YOUR OPTIO';
         createOptioButton.onclick = showOptioModal;
         choicesDiv.appendChild(createOptioButton);
 
@@ -218,12 +237,28 @@ async function submitNexus() {
     }
 }
 
-async function submitOptio() {
-    const content = document.getElementById('optio-content').value;
-    const destId = document.getElementById('destination-id').value;
+// Handle toggle switching
+document.getElementById('old-nexus-toggle').addEventListener('click', function () {
+    this.classList.add('active');
+    document.getElementById('new-nexus-toggle').classList.remove('active');
+    document.getElementById('old-nexus-section').style.display = 'block';
+    document.getElementById('new-nexus-section').style.display = 'none';
+});
 
-    if (!content || !destId) {
-        showStatus('Please fill in all fields', 'error');
+document.getElementById('new-nexus-toggle').addEventListener('click', function () {
+    this.classList.add('active');
+    document.getElementById('old-nexus-toggle').classList.remove('active');
+    document.getElementById('old-nexus-section').style.display = 'none';
+    document.getElementById('new-nexus-section').style.display = 'block';
+});
+
+// Handle submission
+async function submitOptio() {
+    const optioContent = document.getElementById('optio-content').value;
+    const isNewNexus = document.getElementById('new-nexus-toggle').classList.contains('active');
+
+    if (!optioContent) {
+        showStatus('Please fill in the choice text', 'error');
         return;
     }
 
@@ -233,22 +268,54 @@ async function submitOptio() {
     }
 
     try {
-        const tx = await writeContract.bind(
-            currentNexusId,
-            destId,
-            content,
-            { value: ethers.utils.parseEther("0.00004") }
-        );
+        if (isNewNexus) {
+            const nexusContent = document.getElementById('nexus-content').value;
+            if (!nexusContent) {
+                showStatus('Please fill in the nexus content', 'error');
+                return;
+            }
 
-        showStatus('Transaction submitted! Waiting for confirmation...', 'info');
-        await tx.wait();
-        showStatus('Link created successfully!', 'success');
+            // First create the new nexus
+            showStatus('Creating new nexus...', 'info');
+            const nexusTx = await writeContract.contribute(
+                nexusContent,
+                { value: ethers.utils.parseEther("0.00004") }
+            );
+            await nexusTx.wait();
+
+            // Get the new nexus ID
+            const newNexusId = await readContract.nexusCount() - 1;
+
+            // Then create the optio
+            showStatus('Creating optio...', 'info');
+            const optioTx = await writeContract.bind(
+                currentNexusId,
+                newNexusId,
+                optioContent,
+                { value: ethers.utils.parseEther("0.00004") }
+            );
+            await optioTx.wait();
+
+            showStatus('Successfully created new nexus and optio!', 'success');
+        } else {
+            const destinationId = document.getElementById('destination-select').value;
+
+            const tx = await writeContract.bind(
+                currentNexusId,
+                destinationId,
+                optioContent,
+                { value: ethers.utils.parseEther("0.00004") }
+            );
+            await tx.wait();
+            showStatus('Successfully created optio!', 'success');
+        }
+
         hideOptioModal();
         await fetchLatestData();
 
     } catch (error) {
-        console.error('Error creating link:', error);
-        showStatus(`Failed to create link: ${error.message}`, 'error');
+        console.error('Error creating optio:', error);
+        showStatus(`Failed to create optio: ${error.message}`, 'error');
     }
 }
 
@@ -411,19 +478,6 @@ async function displayEntryAndChoices(fullEntry) {
 
 function setupEntryEventListener() {
     if (readContract) {
-        // Listen for new nexuses
-        const nexusFilter = readContract.filters.CreatedNexus();
-        readContract.on(nexusFilter, async (id, event) => {
-            console.log('New nexus created:', id.toNumber());
-
-            // Clear cache entry if it exists
-            dataCache.nexuses.delete(id);
-
-            // If we want to refresh the current view when any new nexus is created
-            // await fetchLatestData();
-        });
-
-        // Listen for new optios
         const optioFilter = readContract.filters.LinkedOptio();
         readContract.on(optioFilter, async (id, origin, destination, event) => {
             console.log('New optio created:', {
@@ -432,14 +486,21 @@ function setupEntryEventListener() {
                 destination: destination.toNumber()
             });
 
-            // Clear cache for the origin nexus since its 'next' array changed
+            // Clear cache for both origin and destination nexuses
+            const originNum = origin.toNumber();
+            const destNum = destination.toNumber();
             dataCache.nexuses.delete(origin);
+            dataCache.nexuses.delete(destination);
             dataCache.optios.delete(id);
 
-            // If we're currently viewing the origin, refresh the display
-            if (currentNexusId === origin.toNumber()) {
+            // Refresh if we're viewing any nexus involved
+            if (currentNexusId === originNum || currentNexusId === destNum) {
                 showStatus('New path added!', 'success');
-                await fetchLatestData();
+                try {
+                    await fetchLatestData();
+                } catch (error) {
+                    console.error('Error refreshing after new optio:', error);
+                }
             }
         });
     }

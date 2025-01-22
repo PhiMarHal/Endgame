@@ -147,7 +147,8 @@ body {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.8);
-    z-index: 1000;
+    overflow-y: auto; /* Allow scrolling of the whole modal */
+    padding: 20px 0; /* Add some padding to prevent content touching edges */
 }
 
 .modal-content {
@@ -155,11 +156,21 @@ body {
     color: #ffd700;
     padding: 2rem;
     max-width: 600px;
-    margin: 50px auto;
+    margin: 20px auto; /* Changed from fixed margin to allow scrolling */
     border: 1px solid #ffd700;
     border-radius: 4px;
+    position: relative; /* Help with stacking context */
 }
 
+/* Make sure buttons stay visible */
+.modal-buttons {
+    position: sticky;
+    bottom: -2rem; /* Negative padding of modal-content */
+    background: #1a1a1a;
+    padding: 1rem 0;
+    margin-top: 1rem;
+    border-top: 1px solid #333;
+}
 .form-group {
     margin-bottom: 1.5rem;
 }
@@ -191,12 +202,6 @@ body {
     margin-top: 0.25rem;
 }
 
-.modal-buttons {
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-    margin-top: 2rem;
-}
 
 .modal-buttons button {
     background: #333;
@@ -209,6 +214,7 @@ body {
 .modal-buttons button:hover {
     background: #444;
 }
+
 
 .view-section {
     width: 100%;
@@ -279,4 +285,35 @@ body {
 
 .action-button:hover {
     background: #444;
+}
+
+.toggle-container {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+    justify-content: center;
+}
+
+.toggle-button {
+    background: #333;
+    color: #ffd700;
+    border: 1px solid #ffd700;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-family: monospace;
+}
+
+.toggle-button.active {
+    background: #ffd700;
+    color: #1a1a1a;
+}
+
+.nexus-select {
+    width: 100%;
+    padding: 10px;
+    background: #333;
+    color: #ffd700;
+    border: 1px solid #ffd700;
+    font-family: monospace;
+    margin-top: 5px;
 }

@@ -59,37 +59,40 @@
         </div>
     </div>
 
-    <!-- Nexus creation modal -->
-    <div id="nexus-modal" class="modal">
-        <div class="modal-content">
-            <h2>Create New Nexus</h2>
-            <div class="form-group">
-                <label for="nexus-content">Content:</label>
-                <textarea id="nexus-content" maxlength="2048" rows="6"></textarea>
-                <div class="character-count">0/2048</div>
-            </div>
-            <div class="modal-buttons">
-                <button id="submit-nexus">Submit (0.00004 ETH)</button>
-                <button id="cancel-nexus">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Optio creation modal -->
+    <!-- Replace the two modals with one unified modal -->
     <div id="optio-modal" class="modal">
         <div class="modal-content">
-            <h2>Link Nexuses</h2>
+            <h2>Add Your Optio</h2>
             <div class="form-group">
                 <label for="optio-content">Choice Text:</label>
-                <textarea id="optio-content" maxlength="2048" rows="6"></textarea>
+                <textarea id="optio-content" maxlength="2048" rows="6"
+                    placeholder="What choice leads there?"></textarea>
                 <div class="character-count">0/2048</div>
             </div>
+
             <div class="form-group">
-                <label for="destination-id">Destination Nexus ID:</label>
-                <input type="number" id="destination-id" min="0">
+                <label>Choose Your Link:</label>
+                <div class="toggle-container">
+                    <button id="old-nexus-toggle" class="toggle-button active">OLD NEXUS</button>
+                    <button id="new-nexus-toggle" class="toggle-button">NEW NEXUS</button>
+                </div>
             </div>
+
+            <div id="old-nexus-section" class="form-group">
+                <label for="destination-select">Select Destination:</label>
+                <select id="destination-select" class="nexus-select">
+                    <!-- Will be populated with known nexuses -->
+                </select>
+            </div>
+
+            <div id="new-nexus-section" class="form-group" style="display: none;">
+                <label for="nexus-content">Nexus Content:</label>
+                <textarea id="nexus-content" maxlength="2048" rows="6" placeholder="What happens there?"></textarea>
+                <div class="character-count">0/2048</div>
+            </div>
+
             <div class="modal-buttons">
-                <button id="submit-optio">Submit (0.00004 ETH)</button>
+                <button id="submit-optio">Submit</button>
                 <button id="cancel-optio">Cancel</button>
             </div>
         </div>
