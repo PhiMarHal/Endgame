@@ -321,25 +321,34 @@ async function submitOptio() {
 
 async function fetchNexusAndOptionsData(nexusId) {
     try {
+        // Normalize the ID for cache operations
+        const normalizedId = normalizeId(nexusId);
+        console.log('Fetching data for normalized ID:', normalizedId, 'original:', nexusId);
+
         // Check cache first
-        const cachedNexus = dataCache.nexuses.get(nexusId);
+        const cachedNexus = dataCache.nexuses.get(normalizedId);
         if (cachedNexus) {
-            console.log('Cache hit for nexus:', nexusId);
+            console.log('Cache hit for nexus:', normalizedId, 'data:', cachedNexus);
             // Get cached optios for this nexus
             const optiosData = [];
             for (const optioId of cachedNexus.next) {
-                const cachedOptio = dataCache.optios.get(optioId);
+                const normalizedOptioId = normalizeId(optioId);
+                const cachedOptio = dataCache.optios.get(normalizedOptioId);
                 if (cachedOptio) {
                     optiosData.push({
-                        id: optioId,
+                        id: normalizedOptioId,
                         ...cachedOptio
                     });
                 }
             }
 
-            // Only fetch from blockchain if we're missing any optios
-            if (optiosData.length === cachedNexus.next.length) {
-                console.log('Using fully cached data');
+            // If we've recently cleared the cache (due to a new optio),
+            // we should fetch fresh data instead of using cache
+            if (cachedNexus.next.length !== optiosData.length) {
+                console.log('Cache incomplete after clear, fetching fresh data');
+                dataCache.nexuses.delete(normalizedId);
+            } else {
+                console.log('Using fully cached data with', optiosData.length, 'optios');
                 return {
                     nexus: cachedNexus,
                     optios: optiosData
@@ -347,8 +356,8 @@ async function fetchNexusAndOptionsData(nexusId) {
             }
         }
 
-        // If not in cache or missing optios, fetch from blockchain
-        console.log('Fetching from blockchain for nexus:', nexusId);
+        // Fetch from blockchain
+        console.log('Fetching from blockchain for nexus:', normalizedId);
         const nexusData = await readContract.getFullNexusBatch([nexusId]);
         const [authors, contents, nexts] = nexusData;
 
@@ -358,22 +367,26 @@ async function fetchNexusAndOptionsData(nexusId) {
             const optioData = await readContract.getFullOptioBatch(nexts[0]);
             const [optioAuthors, optioContents, origins, destinations, scores] = optioData;
 
-            optiosData = nexts[0].map((optioId, index) => ({
-                id: optioId,
-                author: optioAuthors[index],
-                content: optioContents[index],
-                origin: origins[index],
-                destination: destinations[index],
-                score: scores[index]
-            }));
-
-            // Update cache
-            nexts[0].forEach((optioId, index) => {
-                dataCache.optios.set(optioId, {
+            optiosData = nexts[0].map((optioId, index) => {
+                const normalizedOptioId = normalizeId(optioId);
+                return {
+                    id: normalizedOptioId,
                     author: optioAuthors[index],
                     content: optioContents[index],
-                    origin: origins[index],
-                    destination: destinations[index],
+                    origin: normalizeId(origins[index]),
+                    destination: normalizeId(destinations[index]),
+                    score: scores[index]
+                };
+            });
+
+            // Update cache with normalized IDs
+            nexts[0].forEach((optioId, index) => {
+                const normalizedOptioId = normalizeId(optioId);
+                dataCache.optios.set(normalizedOptioId, {
+                    author: optioAuthors[index],
+                    content: optioContents[index],
+                    origin: normalizeId(origins[index]),
+                    destination: normalizeId(destinations[index]),
                     score: scores[index]
                 });
             });
@@ -382,11 +395,11 @@ async function fetchNexusAndOptionsData(nexusId) {
         const nexus = {
             author: authors[0],
             content: contents[0],
-            next: nexts[0]
+            next: nexts[0].map(id => normalizeId(id))
         };
 
-        // Update cache
-        dataCache.nexuses.set(nexusId, nexus);
+        // Update cache with normalized ID
+        dataCache.nexuses.set(normalizedId, nexus);
 
         return {
             nexus,
@@ -480,27 +493,35 @@ function setupEntryEventListener() {
     if (readContract) {
         const optioFilter = readContract.filters.LinkedOptio();
         readContract.on(optioFilter, async (id, origin, destination, event) => {
+            // Normalize all IDs
+            const currentNum = normalizeId(currentNexusId);
+            const originNum = normalizeId(origin);
+            const destNum = normalizeId(destination);
+            const optioId = normalizeId(id);
+
             console.log('New optio created:', {
-                id: id.toNumber(),
-                origin: origin.toNumber(),
-                destination: destination.toNumber()
+                id: optioId,
+                origin: originNum,
+                destination: destNum,
+                currentNexusId: currentNum
             });
 
-            // Clear cache for both origin and destination nexuses
-            const originNum = origin.toNumber();
-            const destNum = destination.toNumber();
-            dataCache.nexuses.delete(origin);
-            dataCache.nexuses.delete(destination);
-            dataCache.optios.delete(id);
+            // Only clear origin nexus cache since its 'next' array changed
+            console.log('Clearing cache for origin nexus:', originNum);
+            dataCache.nexuses.delete(originNum);
 
-            // Refresh if we're viewing any nexus involved
-            if (currentNexusId === originNum || currentNexusId === destNum) {
+            // If we're viewing the origin nexus, refresh the display
+            if (currentNum === originNum) {
+                console.log('Refreshing display for nexus:', currentNum);
                 showStatus('New path added!', 'success');
                 try {
                     await fetchLatestData();
+                    console.log('Display refreshed successfully');
                 } catch (error) {
                     console.error('Error refreshing after new optio:', error);
                 }
+            } else {
+                console.log('Not refreshing - viewing different nexus:', currentNum);
             }
         });
     }
