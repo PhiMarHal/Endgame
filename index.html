@@ -4,11 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trolley Problem Runner</title>
+    <title>Trolley Problem Runner - Abstract (Refined)</title>
     <style>
+        /* Basic reset and body styling */
         body {
             margin: 0;
             overflow: hidden;
+            /* Prevent scrollbars */
+            background-color: #111;
+            /* Dark fallback */
             font-family: Arial, sans-serif;
         }
 
@@ -16,19 +20,20 @@
             display: block;
         }
 
+        /* UI Styles (mostly unchanged, maybe slight adjustments for contrast) */
         #ui-container {
             position: absolute;
             top: 20px;
             left: 20px;
             color: white;
             font-size: 18px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
             max-width: 60%;
         }
 
         #stats-message {
             font-size: 20px;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.6);
             padding: 12px;
             border-radius: 8px;
             margin-bottom: 10px;
@@ -36,15 +41,28 @@
             transition: opacity 0.5s ease-in-out;
         }
 
-        #score {
-            font-size: 24px;
-            font-weight: bold;
+        #progress-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 200px;
+            height: 20px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #FFD700;
+            /* Gold */
+            transition: width 0.5s ease-in-out;
         }
 
         #choice-container {
             position: absolute;
             top: 10%;
-            /* Move higher in the screen */
             left: 0;
             width: 100%;
             text-align: center;
@@ -53,14 +71,13 @@
             display: none;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
             z-index: 10;
-            /* Ensure it's above other elements */
         }
 
         #choice-text {
             margin-bottom: 20px;
             font-size: 28px;
             font-weight: bold;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.6);
             padding: 15px;
             border-radius: 10px;
             max-width: 80%;
@@ -71,16 +88,21 @@
             display: inline-block;
             margin: 10px 20px;
             padding: 15px 30px;
-            background-color: rgba(218, 165, 32, 0.7);
-            border: 2px solid gold;
+            background-color: rgba(80, 80, 80, 0.7);
+            /* Darker background */
+            border: 2px solid #FFD700;
+            /* Gold border */
+            color: #FFD700;
+            /* Gold text */
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s;
         }
 
         .choice-option:hover {
-            background-color: rgba(255, 215, 0, 0.9);
+            background-color: rgba(100, 100, 100, 0.9);
             transform: scale(1.05);
+            color: white;
         }
 
         #game-over {
@@ -88,7 +110,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.8);
+            background-color: rgba(0, 0, 0, 0.85);
             padding: 40px;
             border-radius: 15px;
             text-align: center;
@@ -98,7 +120,8 @@
         }
 
         #restart-button {
-            background-color: gold;
+            background-color: #FFD700;
+            /* Gold */
             color: black;
             border: none;
             padding: 15px 30px;
@@ -111,7 +134,8 @@
 
         #restart-button:hover {
             transform: scale(1.05);
-            background-color: #ffd700;
+            background-color: #ffec8b;
+            /* Lighter Gold */
         }
 
         #decisions-list {
@@ -121,11 +145,41 @@
             overflow-y: auto;
             padding: 10px;
             background-color: rgba(0, 0, 0, 0.5);
+            border: 1px solid #444;
+            border-radius: 5px;
         }
 
         .decision {
             margin: 5px 0;
             font-size: 16px;
+        }
+
+        #instructions {
+            position: absolute;
+            top: 60px;
+            /* Adjusted position */
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 300px;
+            font-size: 14px;
+            z-index: 11;
+            /* Ensure it's above progress bar */
+            display: block;
+            /* Start visible */
+        }
+
+        #instructions-toggle {
+            background: #FFD700;
+            /* Gold */
+            color: black;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -135,10 +189,8 @@
         <div id="stats-message"></div>
     </div>
 
-    <div id="progress-container"
-        style="position: absolute; top: 20px; right: 20px; width: 200px; height: 20px; background-color: rgba(0, 0, 0, 0.5); border-radius: 10px; overflow: hidden;">
-        <div id="progress-bar"
-            style="height: 100%; width: 0%; background-color: gold; transition: width 0.5s ease-in-out;"></div>
+    <div id="progress-container">
+        <div id="progress-bar"></div>
     </div>
 
     <div id="choice-container">
@@ -149,1292 +201,243 @@
 
     <div id="game-over">
         <h1>Game Over</h1>
-        <p id="final-score">Your score: 0</p>
+        <p id="final-score" style="display: none;">Tournament Winner:</p>
         <h2>Your Decisions:</h2>
         <div id="decisions-list"></div>
         <button id="restart-button">Play Again</button>
     </div>
 
+    <div id="instructions">
+        <h2>Trolley Problem Runner</h2>
+        <p><strong>Controls:</strong></p>
+        <ul>
+            <li>Left/Right Arrow: Choose track at forks</li>
+        </ul>
+        <p>Face moral dilemmas. Choose who gets squashed. The other advances in the tournament.</p>
+        <button id="instructions-toggle">Hide Instructions</button>
+    </div>
+
     <script type="module">
         import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
 
+        // --- Constants ---
+        const L_SHAPE_THICKNESS = 0.1;
+        const L_SHAPE_VERTICAL_LENGTH_RATIO = 0.25;
+        const L_SHAPE_COLOR = 0xFFD700;
+        const L_SHAPE_SPACING = 2.5;
+        const SKY_COLOR = 0x6A0DAD;
+        const GROUND_COLOR = 0x222222;
+        const FOG_COLOR = 0x3a075c;
+        const PLAYER_COLOR = 0x4169E1;
+        const MIN_VISIBLE_Z = 5;
+        const MAX_VISIBLE_Z = 80;
+        // NITPICK FIX 1: Increase min width significantly to keep tracks wider for longer
+        const MIN_PERSPECTIVE_WIDTH = 4.0; // Was 1.5
+        const MAX_PERSPECTIVE_WIDTH = 6.0;
+        // NITPICK FIX 2: Increase track separation
+        const FORK_MERGE_OFFSET_X = 4.0; // Was 3.0
+
         // Game state
-        const gameState = {
-            decisions: [],     // Track all choices
-            timeElapsed: 0,
-            choiceMade: false,
-            choiceInProgress: false,
-            nextChoiceTime: 10,
-            darkMode: false,
-            isRunning: true    // Make sure this is set to true
-        };
+        const gameState = { decisions: [], timeElapsed: 0, choiceMade: false, choiceInProgress: false, isRunning: true, currentForkSegment: null };
 
-        // Scene setup
+        // --- Scene Setup ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB); // Sky blue background
+        scene.background = new THREE.Color(SKY_COLOR);
+        scene.fog = new THREE.Fog(FOG_COLOR, 25, MAX_VISIBLE_Z); // Start fog slightly later
 
-        // Camera
+        // --- Camera ---
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 5, -10);
-        camera.lookAt(0, 0, 20);
+        // NITPICK FIX 5: Lower camera Y, look lower and further ahead
+        camera.position.set(0, 3.5, -8);
+        camera.lookAt(0, -1, 15); // Look slightly down
 
-        // Renderer
+        // --- Renderer ---
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
 
-        // Lights
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(ambientLight);
-
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(10, 20, 10);
-        directionalLight.castShadow = true;
-        directionalLight.shadow.camera.left = -50;
-        directionalLight.shadow.camera.right = 50;
-        directionalLight.shadow.camera.top = 50;
-        directionalLight.shadow.camera.bottom = -50;
-        directionalLight.shadow.mapSize.width = 2048;
-        directionalLight.shadow.mapSize.height = 2048;
+        // --- Lights ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        directionalLight.position.set(10, 15, 5); directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 1024; directionalLight.shadow.mapSize.height = 1024;
+        directionalLight.shadow.camera.near = 1; directionalLight.shadow.camera.far = 50;
+        directionalLight.shadow.camera.left = -20; directionalLight.shadow.camera.right = 20;
+        directionalLight.shadow.camera.top = 20; directionalLight.shadow.camera.bottom = -20;
         scene.add(directionalLight);
 
-        // Creating the golden L-shaped rails
-        function createLShapedRail() {
-            const lShape = new THREE.Shape();
-            lShape.moveTo(0, 0);
-            lShape.lineTo(0, 1);
-            lShape.lineTo(0.3, 1);
-            lShape.lineTo(0.3, 0.3);
-            lShape.lineTo(1, 0.3);
-            lShape.lineTo(1, 0);
-            lShape.lineTo(0, 0);
+        // --- Materials ---
+        const trackMaterial = new THREE.MeshStandardMaterial({ color: L_SHAPE_COLOR, roughness: 0.8, metalness: 0.1 });
+        const groundMaterial = new THREE.MeshStandardMaterial({ color: GROUND_COLOR, side: THREE.DoubleSide, roughness: 1.0 });
 
-            const extrudeSettings = {
-                steps: 1,
-                depth: 0.2,
-                bevelEnabled: false
-            };
-
-            const geometry = new THREE.ExtrudeGeometry(lShape, extrudeSettings);
-            const material = new THREE.MeshStandardMaterial({
-                color: 0xFAD02C, // Lighter gold color
-                metalness: 0.7,
-                roughness: 0.3
-            });
-
-            return new THREE.Mesh(geometry, material);
-        }
-        // Track container for all rail segments
-        const trackContainer = new THREE.Object3D();
-        scene.add(trackContainer);
-
-        // Player character
-        const playerGeometry = new THREE.SphereGeometry(0.5, 32, 32);
-        const playerMaterial = new THREE.MeshStandardMaterial({ color: 0x4169E1 }); // Royal blue
-        const player = new THREE.Mesh(playerGeometry, playerMaterial);
-        player.position.set(0, 1, 0);
-        player.castShadow = true;
-        scene.add(player);
-
-        // Ground
+        // --- Ground ---
         const groundGeometry = new THREE.PlaneGeometry(5000, 5000);
-        const groundMaterial = new THREE.MeshStandardMaterial({
-            color: 0x228B22,  // Forest green
-            side: THREE.DoubleSide
-        });
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-        ground.rotation.x = -Math.PI / 2;
-        ground.position.y = -0.5;
-        ground.receiveShadow = true;
+        ground.rotation.x = -Math.PI / 2; ground.position.y = -0.1; ground.receiveShadow = true;
         scene.add(ground);
 
-
-        // Track segments
-        const trackSegments = [];
-        const segmentLength = 10;
-        const railSpacing = 1.5;
-        let trackZ = 0;
-
-        // Choice options
-        const choiceOptions = [
-            {
-                text: "Which group will you sacrifice?",
-                left: "5 Elderly People",
-                right: "1 Child"
-            },
-            {
-                text: "Who will meet their doom?",
-                left: "3 Doctors",
-                right: "10 Criminals"
-            },
-            {
-                text: "Whose life will you end?",
-                left: "1 Family Member",
-                right: "5 Strangers"
-            },
-            {
-                text: "Who will perish under your wheels?",
-                left: "2 Pregnant Women",
-                right: "10 Men"
-            },
-            {
-                text: "Choose who to sacrifice:",
-                left: "Famous Artist",
-                right: "3 Unknown People"
-            },
-            {
-                text: "Who will you condemn?",
-                left: "1 Innocent Person",
-                right: "2 Guilty People"
-            },
-            {
-                text: "Whose fate will you seal?",
-                left: "Your Best Friend",
-                right: "4 Strangers"
-            },
-            {
-                text: "Who will you run down?",
-                left: "3 Children",
-                right: "8 Adults"
-            },
-            {
-                text: "Which group must die?",
-                left: "Cancer Scientist",
-                right: "5 Teachers"
-            },
-            {
-                text: "Who will you eliminate?",
-                left: "2 Young People",
-                right: "1 Elderly Person with Cure"
-            }
-        ];
-
-        // Define individual options for the tournament
-        const tournamentOptions = [
-            {
-                id: "A",
-                name: "1 Child",
-                description: "An innocent young child"
-            },
-            {
-                id: "B",
-                name: "5 Elderly People",
-                description: "Five senior citizens"
-            },
-            {
-                id: "C",
-                name: "3 Doctors",
-                description: "Three medical professionals"
-            },
-            {
-                id: "D",
-                name: "10 Criminals",
-                description: "Ten convicted felons"
-            },
-            {
-                id: "E",
-                name: "1 Family Member",
-                description: "A close relative"
-            },
-            {
-                id: "F",
-                name: "5 Strangers",
-                description: "Five unknown people"
-            },
-            {
-                id: "G",
-                name: "Your Best Friend",
-                description: "Your closest friend"
-            },
-            {
-                id: "H",
-                name: "4 Random Pedestrians",
-                description: "Four people walking by"
-            }
-        ];
-
-        const tournamentState = {
-            currentRound: 0,               // Current round number (0=first round, 1=semifinals, 2=finals)
-            rounds: [],                    // Array to store options for each round
-            currentMatchupIndex: 0,        // Current matchup index in the current round
-            finished: false,               // Whether the tournament is complete
-            winner: null,                  // The final survivor
-            currentChoice: null            // Currently active choice (to prevent duplicates)
-        };
-
-        // Initialize the tournament
-        function initializeTournament() {
-            // Reset tournament state
-            tournamentState.currentRound = 0;
-            tournamentState.rounds = [];
-            tournamentState.currentMatchupIndex = 0;
-            tournamentState.finished = false;
-            tournamentState.winner = null;
-            tournamentState.currentChoice = null;
-
-            // First round uses all options in their original order (no shuffling)
-            tournamentState.rounds[0] = [...tournamentOptions];
-
-            console.log("Tournament initialized with options:", tournamentState.rounds[0]);
-
-            // Reset progress bar to 0%
-            const progressBar = document.getElementById('progress-bar');
-            if (progressBar) {
-                progressBar.style.width = '0%';
-            }
-        }
-
-        // Get the next matchup for the tournament
-        function getNextMatchup() {
-            // If tournament is finished, return null
-            if (tournamentState.finished) {
-                return null;
-            }
-
-            // Ensure we have the current round available
-            const currentRound = tournamentState.rounds[tournamentState.currentRound];
-            if (!currentRound) {
-                console.error("Current round not found:", tournamentState.currentRound);
-                return null;
-            }
-
-            // Calculate the matchup index
-            const matchupIndex = tournamentState.currentMatchupIndex * 2;
-
-            // Check if we have enough options for this matchup
-            if (matchupIndex + 1 >= currentRound.length) {
-                // If we only have one option left in this round, it automatically advances
-                if (matchupIndex < currentRound.length) {
-                    const remainingOption = currentRound[matchupIndex];
-
-                    // If this is the final round and we have only one option left, it's the winner
-                    if (currentRound.length === 1) {
-                        tournamentState.winner = remainingOption;
-                        tournamentState.finished = true;
-                        endTournament();
-                        return null;
-                    }
-
-                    // Make sure next round array exists
-                    if (!tournamentState.rounds[tournamentState.currentRound + 1]) {
-                        tournamentState.rounds[tournamentState.currentRound + 1] = [];
-                    }
-
-                    // Add the lone option to the next round
-                    tournamentState.rounds[tournamentState.currentRound + 1].push(remainingOption);
-                }
-
-                // Move to the next round
-                moveToNextRound();
-
-                // Get the next matchup in the new round
-                return getNextMatchup();
-            }
-
-            // Return the current matchup
-            return {
-                left: currentRound[matchupIndex],
-                right: currentRound[matchupIndex + 1]
-            };
-        }
-
-        // Record the winner of a matchup and prepare for the next one
-        function recordMatchupResult(winner) {
-            // Make sure the next round array exists
-            if (!tournamentState.rounds[tournamentState.currentRound + 1]) {
-                tournamentState.rounds[tournamentState.currentRound + 1] = [];
-            }
-
-            // Add the winner to the next round
-            tournamentState.rounds[tournamentState.currentRound + 1].push(winner);
-
-            // Log tournament state
-            console.log(`Round ${tournamentState.currentRound}, Matchup ${tournamentState.currentMatchupIndex}: ${winner.name} advances`);
-            console.log(`Next round now has ${tournamentState.rounds[tournamentState.currentRound + 1].length} options`);
-
-            // Move to the next matchup in this round
-            tournamentState.currentMatchupIndex++;
-
-            // Update progress bar immediately after recording the result
-            updateProgressBar();
-
-            const currentRound = tournamentState.rounds[tournamentState.currentRound];
-
-            // Check if we've finished all matchups in this round
-            if (tournamentState.currentMatchupIndex * 2 >= currentRound.length) {
-                // If all matchups in this round are complete, move to next round
-                moveToNextRound();
-            }
-        }
-
-        // Move to the next round of the tournament
-        function moveToNextRound() {
-            // Reset the matchup index for the new round
-            tournamentState.currentMatchupIndex = 0;
-
-            // Move to the next round
-            tournamentState.currentRound++;
-
-            console.log(`Moving to round ${tournamentState.currentRound}`);
-
-            // Check if we have a winner
-            const nextRound = tournamentState.rounds[tournamentState.currentRound];
-            if (nextRound) {
-                console.log(`Round ${tournamentState.currentRound} has ${nextRound.length} options`);
-
-                // If there's only one option in the next round, that's our winner
-                if (nextRound.length === 1) {
-                    tournamentState.winner = nextRound[0];
-                    tournamentState.finished = true;
-                    endTournament();
-                }
-            }
-        }
-
-        // End the tournament with a winner
-        function endTournament() {
-            if (tournamentState.winner) {
-                // Show the winner message (using similar stats format)
-                const statsMessage = document.getElementById('stats-message');
-                statsMessage.textContent = `FINAL SURVIVOR: "${tournamentState.winner.name}" has emerged victorious!`;
-                statsMessage.style.opacity = 1;
-
-                // Update progress bar to 100%
-                const progressBar = document.getElementById('progress-bar');
-                progressBar.style.width = '100%';
-
-                // Game over after a delay
-                setTimeout(() => {
-                    gameOver();
-                }, 5000);
-            }
-        }
-
-        // Format a matchup as a descriptive question
-        function formatMatchupQuestion(matchup) {
-            if (!matchup) return "No matchup available";
-            return `Who will you sacrifice? Choose between:`;
-        }
-
-        // Initialize track
-        function initializeTrack() {
-            // Create initial straight track segments
-            for (let i = 0; i < 20; i++) {
-                createStraightTrackSegment(trackZ);
-                trackZ += segmentLength;
-            }
-        }
-
-        // Create a single L-shaped rail pair (left and right rails)
-        function createRailPair(z) {
-            // Left rail
-            const leftRail = createLShapedRail();
-            leftRail.position.set(-railSpacing / 2, 0, z);
-            leftRail.rotation.y = Math.PI;
-            leftRail.castShadow = true;
-            trackContainer.add(leftRail);
-
-            // Right rail
-            const rightRail = createLShapedRail();
-            rightRail.position.set(railSpacing / 2, 0, z);
-            rightRail.castShadow = true;
-            trackContainer.add(rightRail);
-
-            return { leftRail, rightRail };
-        }
-
-        // Creating the L-shaped track with properly defined shapes
-        function createLShapedTrack(startZ, segmentCount) {
-            const trackGroup = new THREE.Group();
-            const spacing = 2.5;  // Spacing between consecutive L segments
-            const xOffset = 2;  // Lateral offset
-
-            for (let i = 0; i < segmentCount; i++) {
-                // Strict alternating pattern
-                const isLeft = i % 2 === 0;
-                const z = startZ + (i * spacing);
-
-                // Create an L shape directly with vertices
-                const shape = new THREE.Shape();
-
-                if (isLeft) {
-                    // Left side L (explicitly elongated)
-                    shape.moveTo(0, 0);
-                    shape.lineTo(0, -2);     // Long vertical line
-                    shape.lineTo(-0.5, -2);   // Short horizontal connector
-                    shape.lineTo(-0.5, -0.5); // Short vertical connector
-                    shape.lineTo(-4, -0.5);   // Long horizontal line
-                    shape.lineTo(-4, 0);     // Short vertical connector
-                    shape.lineTo(0, 0);     // Close shape
-                } else {
-                    // Right side L (explicitly elongated)
-                    shape.moveTo(0, 0);
-                    shape.lineTo(0, -2);     // Long vertical line
-                    shape.lineTo(0.5, -2);  // Short horizontal connector
-                    shape.lineTo(0.5, -0.5); // Short vertical connector
-                    shape.lineTo(4, -0.5);   // Long horizontal line
-                    shape.lineTo(4, 0);     // Short vertical connector
-                    shape.lineTo(0, 0);      // Close shape
-                }
-
-                const extrudeSettings = {
-                    steps: 1,
-                    depth: 0.1, // Thin - flat on ground
-                    bevelEnabled: false
-                };
-
-                const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-                const material = new THREE.MeshStandardMaterial({
-                    color: 0xFAD02C, // Gold color
-                    metalness: 0.7,
-                    roughness: 0.3
-                });
-
-                const lMesh = new THREE.Mesh(geometry, material);
-                lMesh.castShadow = true;  // Enable shadow casting
-                lMesh.receiveShadow = true; // Enable shadow receiving
-
-                // Position the L flat on the ground
-                lMesh.rotation.x = -Math.PI / 2;  // Lay flat
-
-                // Position left/right with proper offset
-                if (isLeft) {
-                    lMesh.position.set(xOffset, 0, z);
-                } else {
-                    lMesh.position.set(-xOffset, 0, z);
-                }
-
-                trackGroup.add(lMesh);
-            }
-
-            return trackGroup;
-        }
-        // Create a fork track that uses the same L-shape pattern as the main track
-        function createLShapedForkTrack(startZ, length, isLeftPath) {
-            const trackGroup = new THREE.Group();
-            const spacing = 2.5;  // Same spacing as main track
-            const segmentCount = Math.ceil(length / spacing);
-
-            // Calculate curve parameters
-            const maxOffset = isLeftPath ? -3 : 3; // Maximum lateral offset
-            const startOffset = isLeftPath ? -2 : 2; // Starting position
-
-            for (let i = 0; i < segmentCount; i++) {
-                // Calculate position along curve
-                const progress = Math.min(i / (segmentCount * 0.7), 1);
-                const xOffset = startOffset + (maxOffset - startOffset) * progress;
-                const z = startZ + (i * spacing);
-
-                // Alternate L shapes like on main track
-                const isLeft = i % 2 === 0;
-
-                // Create L shape with same pattern as main track
-                const shape = new THREE.Shape();
-
-                if (isLeft) {
-                    // Left side L 
-                    shape.moveTo(0, 0);
-                    shape.lineTo(0, -2);
-                    shape.lineTo(-0.5, -2);
-                    shape.lineTo(-0.5, -0.5);
-                    shape.lineTo(-4, -0.5);
-                    shape.lineTo(-4, 0);
-                    shape.lineTo(0, 0);
-                } else {
-                    // Right side L
-                    shape.moveTo(0, 0);
-                    shape.lineTo(0, -2);
-                    shape.lineTo(0.5, -2);
-                    shape.lineTo(0.5, -0.5);
-                    shape.lineTo(4, -0.5);
-                    shape.lineTo(4, 0);
-                    shape.lineTo(0, 0);
-                }
-
-                const extrudeSettings = {
-                    steps: 1,
-                    depth: 0.1,
-                    bevelEnabled: false
-                };
-
-                const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-                const material = new THREE.MeshStandardMaterial({
-                    color: 0xFAD02C,
-                    metalness: 0.7,
-                    roughness: 0.3
-                });
-
-                const lMesh = new THREE.Mesh(geometry, material);
-
-                // Fix shadow casting
-                lMesh.castShadow = true;
-                lMesh.receiveShadow = true;
-
-                // Position with proper offset and lay flat
-                lMesh.rotation.x = -Math.PI / 2;
-
-                // Apply curve position offset
-                if (isLeftPath) {
-                    lMesh.position.set(xOffset - (isLeft ? 0 : 4), 0, z);
-                } else {
-                    lMesh.position.set(xOffset + (isLeft ? 4 : 0), 0, z);
-                }
-
-                // Apply slight rotation to follow curve
-                const rotationY = isLeftPath ? 0.2 * progress : -0.2 * progress;
-                lMesh.rotation.y = rotationY;
-
-                trackGroup.add(lMesh);
-            }
-
-            return trackGroup;
-        }
-
-        // Fix shadows for all objects
-        function fixShadows() {
-            // Enable shadows on renderer
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-            // Light shadow settings
-            directionalLight.castShadow = true;
-            directionalLight.shadow.mapSize.width = 2048;
-            directionalLight.shadow.mapSize.height = 2048;
-            directionalLight.shadow.camera.near = 0.5;
-            directionalLight.shadow.camera.far = 500;
-            directionalLight.shadow.camera.left = -50;
-            directionalLight.shadow.camera.right = 50;
-            directionalLight.shadow.camera.top = 50;
-            directionalLight.shadow.camera.bottom = -50;
-
-            // Player shadow
-            player.castShadow = true;
-            player.receiveShadow = false;
-
-            // Ground shadow
-            ground.receiveShadow = true;
-            ground.castShadow = false;
-
-            // Helper to show light's view (uncomment for debugging)
-            // const helper = new THREE.CameraHelper(directionalLight.shadow.camera);
-            // scene.add(helper);
-        }
-
-        // Create a merged version of the L-shaped track for the merge section
-        function createLShapedMergeTrack(startZ, length, isLeftPath) {
-            const trackGroup = new THREE.Group();
-            const spacing = 2.5;
-            const segmentCount = Math.ceil(length / spacing);
-
-            // Curve from offset position back to center
-            const startOffset = isLeftPath ? -5 : 5;
-            const endOffset = isLeftPath ? -2 : 2;
-
-            for (let i = 0; i < segmentCount; i++) {
-                // Calculate position along curve (from outside to inside)
-                const progress = i / segmentCount;
-                const xOffset = startOffset + (endOffset - startOffset) * progress;
-                const z = startZ + (i * spacing);
-
-                // Alternate L shapes
-                const isLeft = i % 2 === 0;
-
-                // Create L shape
-                const shape = new THREE.Shape();
-
-                if (isLeft) {
-                    // Left side L
-                    shape.moveTo(0, 0);
-                    shape.lineTo(0, -2);
-                    shape.lineTo(-0.5, -2);
-                    shape.lineTo(-0.5, -0.5);
-                    shape.lineTo(-4, -0.5);
-                    shape.lineTo(-4, 0);
-                    shape.lineTo(0, 0);
-                } else {
-                    // Right side L
-                    shape.moveTo(0, 0);
-                    shape.lineTo(0, -2);
-                    shape.lineTo(0.5, -2);
-                    shape.lineTo(0.5, -0.5);
-                    shape.lineTo(4, -0.5);
-                    shape.lineTo(4, 0);
-                    shape.lineTo(0, 0);
-                }
-
-                const extrudeSettings = {
-                    steps: 1,
-                    depth: 0.1,
-                    bevelEnabled: false
-                };
-
-                const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-                const material = new THREE.MeshStandardMaterial({
-                    color: 0xFAD02C,
-                    metalness: 0.7,
-                    roughness: 0.3
-                });
-
-                const lMesh = new THREE.Mesh(geometry, material);
-                lMesh.castShadow = true;
-                lMesh.receiveShadow = true;
-
-                // Position flat on ground
-                lMesh.rotation.x = -Math.PI / 2;
-
-                // Apply curve position
-                if (isLeftPath) {
-                    lMesh.position.set(xOffset - (isLeft ? 0 : 4), 0, z);
-                } else {
-                    lMesh.position.set(xOffset + (isLeft ? 4 : 0), 0, z);
-                }
-
-                // Apply slight rotation to follow curve
-                const rotationY = isLeftPath ? -0.2 * (1 - progress) : 0.2 * (1 - progress);
-                lMesh.rotation.y = rotationY;
-
-                trackGroup.add(lMesh);
-            }
-
-            return trackGroup;
-        }
-
-        // Update createForkSegment to use L-shaped tracks
-        // Update createForkSegment to use improved L-shaped tracks
+        // --- Player ---
+        const playerGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+        const playerMaterial = new THREE.MeshStandardMaterial({ color: PLAYER_COLOR, roughness: 0.5, metalness: 0.2 });
+        const player = new THREE.Mesh(playerGeometry, playerMaterial);
+        player.position.set(0, 0.5, 0); player.castShadow = true; player.userData.targetX = 0;
+        scene.add(player);
+
+        // --- Track Management ---
+        const trackContainer = new THREE.Object3D(); scene.add(trackContainer);
+        const trackSegments = []; let trackZ = 0; const segmentLength = 10;
+
+        // --- Tournament Logic (Unchanged) ---
+        const tournamentOptions = [{ id: "A", name: "1 Child", description: "An innocent young child" }, { id: "B", name: "5 Elderly People", description: "Five senior citizens" }, { id: "C", name: "3 Doctors", description: "Three medical professionals" }, { id: "D", name: "10 Criminals", description: "Ten convicted felons" }, { id: "E", name: "1 Family Member", description: "A close relative" }, { id: "F", name: "5 Strangers", description: "Five unknown people" }, { id: "G", name: "Your Best Friend", description: "Your closest friend" }, { id: "H", name: "4 Random Pedestrians", description: "Four people walking by" }];
+        const tournamentState = { currentRound: 0, rounds: [], currentMatchupIndex: 0, finished: false, winner: null, currentChoice: null };
+        function initializeTournament() { tournamentState.currentRound = 0; tournamentState.rounds = []; tournamentState.currentMatchupIndex = 0; tournamentState.finished = false; tournamentState.winner = null; tournamentState.currentChoice = null; tournamentState.rounds[0] = [...tournamentOptions]; console.log("Tournament initialized with options:", tournamentState.rounds[0]); const progressBar = document.getElementById('progress-bar'); if (progressBar) { progressBar.style.width = '0%'; } }
+        function getNextMatchup() { if (tournamentState.finished) { return null; } const currentRound = tournamentState.rounds[tournamentState.currentRound]; if (!currentRound) { console.error("Current round not found:", tournamentState.currentRound); return null; } const matchupIndex = tournamentState.currentMatchupIndex * 2; if (matchupIndex + 1 >= currentRound.length) { if (matchupIndex < currentRound.length) { const remainingOption = currentRound[matchupIndex]; if (currentRound.length === 1) { tournamentState.winner = remainingOption; tournamentState.finished = true; endTournament(); return null; } if (!tournamentState.rounds[tournamentState.currentRound + 1]) { tournamentState.rounds[tournamentState.currentRound + 1] = []; } tournamentState.rounds[tournamentState.currentRound + 1].push(remainingOption); } moveToNextRound(); return getNextMatchup(); } return { left: currentRound[matchupIndex], right: currentRound[matchupIndex + 1] }; }
+        function recordMatchupResult(winner) { if (!tournamentState.rounds[tournamentState.currentRound + 1]) { tournamentState.rounds[tournamentState.currentRound + 1] = []; } tournamentState.rounds[tournamentState.currentRound + 1].push(winner); console.log(`Round ${tournamentState.currentRound}, Matchup ${tournamentState.currentMatchupIndex}: ${winner.name} advances`); tournamentState.currentMatchupIndex++; updateProgressBar(); const currentRound = tournamentState.rounds[tournamentState.currentRound]; if (!currentRound) return; if (tournamentState.currentMatchupIndex * 2 >= currentRound.length) { moveToNextRound(); } }
+        function moveToNextRound() { tournamentState.currentMatchupIndex = 0; tournamentState.currentRound++; console.log(`Moving to round ${tournamentState.currentRound}`); const nextRound = tournamentState.rounds[tournamentState.currentRound]; if (nextRound) { console.log(`Round ${tournamentState.currentRound} has ${nextRound.length} options`); if (nextRound.length === 1) { tournamentState.winner = nextRound[0]; tournamentState.finished = true; endTournament(); } } }
+        function endTournament() { if (tournamentState.winner) { const statsMessage = document.getElementById('stats-message'); statsMessage.textContent = `FINAL SURVIVOR: "${tournamentState.winner.name}" has emerged victorious!`; statsMessage.style.opacity = 1; const progressBar = document.getElementById('progress-bar'); progressBar.style.width = '100%'; setTimeout(() => { gameOver(); }, 5000); } }
+        // --- End Tournament Logic ---
+
+        // --- Abstract L-Shape Track Creation ---
+        function createSingleLShape(width, orientation) { /* ... (Unchanged from previous fix) ... */ const group = new THREE.Group(); const verticalLength = width * L_SHAPE_VERTICAL_LENGTH_RATIO; const horizontalGeo = new THREE.BoxGeometry(width, L_SHAPE_THICKNESS, L_SHAPE_THICKNESS); const horizontalMesh = new THREE.Mesh(horizontalGeo, trackMaterial); horizontalMesh.castShadow = true; horizontalMesh.receiveShadow = true; horizontalMesh.position.y = 0; group.add(horizontalMesh); const verticalGeo = new THREE.BoxGeometry(L_SHAPE_THICKNESS, L_SHAPE_THICKNESS, verticalLength); const verticalMesh = new THREE.Mesh(verticalGeo, trackMaterial); verticalMesh.castShadow = true; verticalMesh.receiveShadow = true; verticalMesh.position.z = verticalLength / 2; verticalMesh.position.y = 0; if (orientation === 'left') { verticalMesh.position.x = -width / 2 + L_SHAPE_THICKNESS / 2; } else { verticalMesh.position.x = width / 2 - L_SHAPE_THICKNESS / 2; } group.add(verticalMesh); return group; }
+        function createLShapedTrackSequence(startZ, trackLength, pathFunction) { /* ... (Unchanged perspective width calculation) ... */ const trackGroup = new THREE.Group(); const numShapes = Math.max(1, Math.ceil(trackLength / L_SHAPE_SPACING)); let currentOrientation = (Math.floor(startZ / L_SHAPE_SPACING) % 2 === 0) ? 'left' : 'right'; for (let i = 0; i < numShapes; i++) { const zPos = startZ + i * L_SHAPE_SPACING; const progress = trackLength > 0 ? Math.max(0, Math.min(1, (zPos - startZ) / trackLength)) : 0; const pathData = pathFunction(progress); const distanceZ = zPos - camera.position.z; const perspectiveFactor = Math.max(0, Math.min(1, (distanceZ - MIN_VISIBLE_Z) / (MAX_VISIBLE_Z - MIN_VISIBLE_Z))); const currentPerspectiveWidth = MAX_PERSPECTIVE_WIDTH + (MIN_PERSPECTIVE_WIDTH - MAX_PERSPECTIVE_WIDTH) * perspectiveFactor; const lShape = createSingleLShape(currentPerspectiveWidth, currentOrientation); lShape.position.copy(pathData.position); lShape.position.z = zPos; lShape.rotation.y = pathData.rotationY; trackGroup.add(lShape); currentOrientation = (currentOrientation === 'left') ? 'right' : 'left'; } trackContainer.add(trackGroup); return trackGroup; }
+
+        // --- Path Functions ---
+        function straightPath(offsetX = 0) { return (progress) => ({ position: new THREE.Vector3(offsetX, 0, 0), rotationY: 0 }); }
+        // NITPICK FIX 2: Use increased offset
+        function forkPath(isLeftPath) { const maxOffset = isLeftPath ? -FORK_MERGE_OFFSET_X : FORK_MERGE_OFFSET_X; const startOffset = 0; return (progress) => { const currentOffset = startOffset + (maxOffset - startOffset) * progress; const rotationY = (isLeftPath ? -1 : 1) * progress * 0.15; return { position: new THREE.Vector3(currentOffset, 0, 0), rotationY: rotationY }; }; } // Reduced rotation
+        function mergePath(isLeftPath) { const startOffset = isLeftPath ? -FORK_MERGE_OFFSET_X : FORK_MERGE_OFFSET_X; const endOffset = 0; return (progress) => { const currentOffset = startOffset + (endOffset - startOffset) * progress; const rotationY = (isLeftPath ? 1 : -1) * (1 - progress) * 0.15; return { position: new THREE.Vector3(currentOffset, 0, 0), rotationY: rotationY }; }; } // Reduced rotation
+
+        // --- Logical Track Segment Creation ---
+        function createStraightTrackSegment(startZ, customLength = segmentLength) { const trackMeshGroup = createLShapedTrackSequence(startZ, customLength, straightPath()); const segment = { type: 'straight', startZ: startZ, endZ: startZ + customLength, meshGroup: trackMeshGroup }; trackSegments.push(segment); return segment; }
         function createForkSegment(startZ, choice) {
-            const forkLength = segmentLength * 2;
-            const segment = {
-                type: 'fork',
-                startZ: startZ,
-                endZ: startZ + forkLength,
-                leftChoice: choice.left,
-                rightChoice: choice.right,
-                rails: [],
-                choiceText: choice.text,
-                splitPoint: startZ + segmentLength / 3,
-                matchup: choice.matchup
-            };
+            const forkLength = segmentLength * 2.5;
+            const splitPoint = startZ + segmentLength * 0.5;
+            const endFork = startZ + forkLength;
+            const leftPathMesh = createLShapedTrackSequence(splitPoint, endFork - splitPoint, forkPath(true));
+            const rightPathMesh = createLShapedTrackSequence(splitPoint, endFork - splitPoint, forkPath(false));
+            const segment = { type: 'fork', startZ: startZ, splitPoint: splitPoint, endZ: endFork, leftChoice: choice.left, rightChoice: choice.right, matchup: choice.matchup, leftPathMesh: leftPathMesh, rightPathMesh: rightPathMesh, leftObject: null, rightObject: null, triggered: false };
 
-            // First part is straight
-            createStraightTrackSegment(startZ, segment.splitPoint - startZ);
+            // NITPICK FIX 4: Position choice objects at apex of curve
+            const apexProgress = 0.5;
+            const apexZ = splitPoint + (endFork - splitPoint) * apexProgress;
+            const leftApexData = forkPath(true)(apexProgress);
+            const rightApexData = forkPath(false)(apexProgress);
 
-            // Create diverging tracks with consistent L-shapes
-            const leftPath = createLShapedForkTrack(segment.splitPoint, forkLength * 2 / 3, true);
-            const rightPath = createLShapedForkTrack(segment.splitPoint, forkLength * 2 / 3, false);
+            const choiceGeom = new THREE.SphereGeometry(0.6, 16, 16);
+            const leftChoiceMat = new THREE.MeshStandardMaterial({ color: 0xFF4500 });
+            const leftChoiceObj = new THREE.Mesh(choiceGeom, leftChoiceMat);
+            // Use calculated apex position (X and Z)
+            leftChoiceObj.position.set(leftApexData.position.x, 0.6, apexZ);
+            leftChoiceObj.castShadow = true; leftChoiceObj.userData.choice = 'left'; trackContainer.add(leftChoiceObj); segment.leftObject = leftChoiceObj;
 
-            trackContainer.add(leftPath);
-            trackContainer.add(rightPath);
-
-            segment.leftPath = leftPath;
-            segment.rightPath = rightPath;
-
-            // Add choice objects at the middle of the fork
-            const choiceZ = segment.splitPoint + forkLength / 4;
-
-            // Left choice object
-            const leftChoiceGeom = new THREE.BoxGeometry(1, 1, 1);
-            const leftChoiceMat = new THREE.MeshStandardMaterial({ color: 0xFF0000 });
-            const leftChoiceObj = new THREE.Mesh(leftChoiceGeom, leftChoiceMat);
-            leftChoiceObj.position.set(-3, 1, choiceZ);
-            leftChoiceObj.castShadow = true;
-            leftChoiceObj.userData.choice = 'left';
-            leftChoiceObj.userData.text = choice.left;
-            trackContainer.add(leftChoiceObj);
-            segment.leftObject = leftChoiceObj;
-
-            // Right choice object
-            const rightChoiceGeom = new THREE.BoxGeometry(1, 1, 1);
-            const rightChoiceMat = new THREE.MeshStandardMaterial({ color: 0xFF0000 });
-            const rightChoiceObj = new THREE.Mesh(rightChoiceGeom, rightChoiceMat);
-            rightChoiceObj.position.set(3, 1, choiceZ);
-            rightChoiceObj.castShadow = true;
-            rightChoiceObj.userData.choice = 'right';
-            rightChoiceObj.userData.text = choice.right;
-            trackContainer.add(rightChoiceObj);
-            segment.rightObject = rightChoiceObj;
+            const rightChoiceMat = new THREE.MeshStandardMaterial({ color: 0xFF4500 });
+            const rightChoiceObj = new THREE.Mesh(choiceGeom, rightChoiceMat);
+            // Use calculated apex position (X and Z)
+            rightChoiceObj.position.set(rightApexData.position.x, 0.6, apexZ);
+            rightChoiceObj.castShadow = true; rightChoiceObj.userData.choice = 'right'; trackContainer.add(rightChoiceObj); segment.rightObject = rightChoiceObj;
 
             trackSegments.push(segment);
             return segment;
         }
-        // Update merge segment to use L-shaped tracks
-        // Update merge segment to use consistent L-shaped tracks
         function createMergeSegment(startZ) {
-            const mergeLength = segmentLength * 2;
-            const segment = {
-                type: 'merge',
-                startZ: startZ,
-                endZ: startZ + mergeLength,
-                rails: [],
-                mergePoint: startZ + mergeLength * 2 / 3
-            };
-
-            // Create converging tracks with consistent L-shapes
-            const leftPath = createLShapedMergeTrack(startZ, mergeLength * 2 / 3, true);
-            const rightPath = createLShapedMergeTrack(startZ, mergeLength * 2 / 3, false);
-
-            trackContainer.add(leftPath);
-            trackContainer.add(rightPath);
-
-            segment.leftPath = leftPath;
-            segment.rightPath = rightPath;
-
-            // Second part is straight
-            createStraightTrackSegment(segment.mergePoint, segment.endZ - segment.mergePoint);
-
-            trackSegments.push(segment);
-            return segment;
-        }
-        // Replace createRailPair with this function
-        function createTrackSegment(z) {
-            // Create a small section of L-shaped track (3 L's)
-            const trackSection = createLShapedTrack(z, 3);
-            trackContainer.add(trackSection);
-            return trackSection;
-        }
-
-        // Ensure only one track section is created for each segment
-        function createStraightTrackSegment(startZ, customLength = segmentLength) {
-            const segment = {
-                type: 'straight',
-                startZ: startZ,
-                endZ: startZ + customLength,
-                trackSections: []
-            };
-
-            // Calculate how many L-shapes we need
-            const lPerSegment = Math.max(2, Math.ceil(customLength / 2.5));
-
-            // Create a single track section with the appropriate number of L-shapes
-            const trackSection = createLShapedTrack(startZ, lPerSegment);
-            trackContainer.add(trackSection);
-            segment.trackSections = [trackSection];
-
+            const mergeLength = segmentLength * 2.5;
+            const endMerge = startZ + mergeLength;
+            const mergeVisualEnd = endMerge - segmentLength * 0.5;
+            const leftPathMesh = createLShapedTrackSequence(startZ, mergeVisualEnd - startZ, mergePath(true));
+            const rightPathMesh = createLShapedTrackSequence(startZ, mergeVisualEnd - startZ, mergePath(false));
+            const segment = { type: 'merge', startZ: startZ, endZ: endMerge, mergePoint: mergeVisualEnd, leftPathMesh: leftPathMesh, rightPathMesh: rightPathMesh };
             trackSegments.push(segment);
             return segment;
         }
 
-        // Initialize the game
-        // Initialize the game
-        function init() {
-            // Fix shadows before creating any objects
-            fixShadows();
-
-            initializeTrack();
-            initializeTournament();
-            addEventListeners();
-
-            // Initialize progress bar at 0%
-            updateProgressBar();
-
-            animate();
-        }
-
-        // Event listeners for choice buttons
-        function addEventListeners() {
-            document.getElementById('choice-left').addEventListener('click', () => makeChoice('left'));
-            document.getElementById('choice-right').addEventListener('click', () => makeChoice('right'));
-            document.getElementById('restart-button').addEventListener('click', restartGame);
-            document.getElementById('instructions-toggle').addEventListener('click', () => {
-                const instructions = document.getElementById('instructions');
-                instructions.style.display = instructions.style.display === 'none' ? 'block' : 'none';
-            });
-
-            // Keyboard controls
-            window.addEventListener('keydown', (event) => {
-                if (gameState.choiceInProgress) {
-                    if (event.key === 'ArrowLeft') {
-                        makeChoice('left');
-                    } else if (event.key === 'ArrowRight') {
-                        makeChoice('right');
-                    }
-                }
-
-                // Toggle dark mode
-                if (event.key === 'd') {
-                    toggleDarkMode();
-                }
-            });
-
-            // Resize handler
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-        }
-
-        // Toggle dark/light mode
-        function toggleDarkMode() {
-            gameState.darkMode = !gameState.darkMode;
-
-            if (gameState.darkMode) {
-                scene.background = new THREE.Color(0x000033); // Dark blue night sky
-                ground.material.color.set(0x0A3B0A); // Dark green ground
-                directionalLight.intensity = 0.4;
-                ambientLight.intensity = 0.2;
-            } else {
-                scene.background = new THREE.Color(0x87CEEB); // Sky blue
-                ground.material.color.set(0x228B22); // Forest green
-                directionalLight.intensity = 0.8;
-                ambientLight.intensity = 0.5;
-            }
-        }
-
-        // Make a track choice
-        function makeChoice(direction) {
-            if (!gameState.choiceInProgress || gameState.choiceMade) return;
-
-            gameState.choiceMade = true;
-            const choiceContainer = document.getElementById('choice-container');
-            choiceContainer.style.display = 'none';
-
-            // Resume the game after making a choice
-            gameState.isRunning = true;
-
-            // Find the current fork segment
-            const currentSegment = trackSegments.find(segment =>
-                segment.type === 'fork' &&
-                player.position.z >= segment.startZ &&
-                player.position.z < segment.endZ
-            );
-
-            if (currentSegment && currentSegment.matchup) {
-                // Get the choice text based on direction
-                const choiceText = direction === 'left' ? currentSegment.leftChoice : currentSegment.rightChoice;
-
-                // Record the decision
-                gameState.decisions.push({
-                    dilemma: "SQUASH",
-                    choice: choiceText
-                });
-
-                const matchup = currentSegment.matchup;
-
-                // Handle tournament result
-                if (direction === 'left') {
-                    // Player chose to sacrifice left option, so right option survives
-                    recordMatchupResult(matchup.right);
-
-                    // Show stats message about the squashed choice
-                    showStatsMessage(choiceText);
-                } else {
-                    // Player chose to sacrifice right option, so left option survives
-                    recordMatchupResult(matchup.left);
-
-                    // Show stats message about the squashed choice
-                    showStatsMessage(choiceText);
-                }
-
-                // Moving in opposite direction of the button clicked
-                if (direction === 'left') {
-                    player.userData.targetX = 3; // Move to RIGHT track when LEFT is chosen
-
-                    // Show impact on left choice object
-                    if (currentSegment.leftObject) {
-                        const impact = createImpactEffect();
-                        impact.position.copy(currentSegment.leftObject.position);
-                        trackContainer.add(impact);
-
-                        // Remove the left object after impact
-                        setTimeout(() => {
-                            trackContainer.remove(currentSegment.leftObject);
-                        }, 500);
-                    }
-                } else {
-                    player.userData.targetX = -3; // Move to LEFT track when RIGHT is chosen
-
-                    // Show impact on right choice object
-                    if (currentSegment.rightObject) {
-                        const impact = createImpactEffect();
-                        impact.position.copy(currentSegment.rightObject.position);
-                        trackContainer.add(impact);
-
-                        // Remove the right object after impact
-                        setTimeout(() => {
-                            trackContainer.remove(currentSegment.rightObject);
-                        }, 500);
-                    }
-                }
-
-                // Clear the current choice after processing
-                tournamentState.currentChoice = null;
-            }
-        }
-
-
-        function showStatsMessage(choiceText) {
-            // Generate random stats
-            const peopleCount = Math.floor(Math.random() * 10000) + 1000;
-            const percentage = Math.floor(Math.random() * 70) + 15; // Between 15% and 85%
-
-            const statsMessage = document.getElementById('stats-message');
-            statsMessage.textContent = `${peopleCount.toLocaleString()} people (${percentage}%) have also squashed ${choiceText}`;
-
-            // Fade in
-            statsMessage.style.opacity = 1;
-
-            // Fade out after 5 seconds
-            setTimeout(() => {
-                statsMessage.style.opacity = 0;
-            }, 5000);
-        }
-
-        // Create impact particle effect
-        function createImpactEffect() {
-            const impactGroup = new THREE.Group();
-
-            // Create simple particle system for impact
-            for (let i = 0; i < 20; i++) {
-                const particleGeom = new THREE.SphereGeometry(0.1, 8, 8);
-                const particleMat = new THREE.MeshBasicMaterial({ color: 0xFF4500 });
-                const particle = new THREE.Mesh(particleGeom, particleMat);
-
-                // Random position around center
-                particle.position.set(
-                    (Math.random() - 0.5) * 2,
-                    (Math.random() - 0.5) * 2,
-                    (Math.random() - 0.5) * 2
-                );
-
-                // Random velocity
-                particle.userData.velocity = new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.2,
-                    Math.random() * 0.2,
-                    (Math.random() - 0.5) * 0.2
-                );
-
-                // Add to impact group
-                impactGroup.add(particle);
-            }
-
-            // Set timeout to remove the impact effect
-            setTimeout(() => {
-                trackContainer.remove(impactGroup);
-            }, 1000);
-
-            return impactGroup;
-        }
-
-        // Update impact effect particles
-        function updateImpactEffects() {
-            trackContainer.children.forEach(child => {
-                if (child instanceof THREE.Group) {
-                    child.children.forEach(particle => {
-                        if (particle.userData.velocity) {
-                            particle.position.add(particle.userData.velocity);
-                            particle.userData.velocity.y -= 0.01; // Gravity
-                        }
-                    });
-                }
-            });
-        }
-
-        // Update the displayed score
-        function updateScore() {
-            document.getElementById('score').textContent = `Score: ${gameState.score}`;
-        }
-
-        // Update the displayed speed
-        function updateSpeedDisplay() {
-            document.getElementById('speed').textContent = `Speed: ${gameState.speed.toFixed(1)}x`;
-        }
-
-        // Check if we need to generate more track
-        function checkTrackGeneration() {
-            // Get the furthest track segment
-            const lastSegment = trackSegments[trackSegments.length - 1];
-
-            // If player is getting close to the end, generate more track
-            if (player.position.z + 50 > lastSegment.endZ) {
-                // If the tournament is finished, just create straight segments
-                if (tournamentState.finished) {
-                    createStraightTrackSegment(lastSegment.endZ);
-                    return;
-                }
-
-                // Only check for a new matchup if we're not in a choice
-                if (!gameState.choiceInProgress && !gameState.choiceMade && !tournamentState.currentChoice) {
-                    const matchup = getNextMatchup();
-
-                    // If we have a matchup, create a fork
-                    if (matchup) {
-                        // Store this as our current choice to prevent duplicates
-                        tournamentState.currentChoice = matchup;
-
-                        // Create a longer straight segment first
-                        createStraightTrackSegment(lastSegment.endZ, segmentLength * 5);
-                        const lastStraight = trackSegments[trackSegments.length - 1];
-
-                        // Create the tournament choice - simplified UI
-                        const tournamentChoice = {
-                            text: "SQUASH",
-                            left: matchup.left.name,
-                            right: matchup.right.name,
-                            matchup: matchup // Store the full matchup for reference
-                        };
-
-                        // Create fork and merge
-                        createForkSegment(lastStraight.endZ, tournamentChoice);
-                        const lastFork = trackSegments[trackSegments.length - 1];
-                        createMergeSegment(lastFork.endZ);
-
-                        // Create straight track after merge
-                        const lastMerge = trackSegments[trackSegments.length - 1];
-                        createStraightTrackSegment(lastMerge.endZ);
-                    } else {
-                        // Just create a straight segment
-                        createStraightTrackSegment(lastSegment.endZ);
-                    }
-                } else {
-                    // Just create a straight segment
-                    createStraightTrackSegment(lastSegment.endZ);
-                }
-            }
-        }
-
-        // Check if player is in a choice segment and display UI
-        function checkChoiceSegment() {
-            if (gameState.choiceMade) {
-                // If already made a choice, check if we're past the fork
-                const currentFork = trackSegments.find(segment =>
-                    segment.type === 'fork' &&
-                    player.position.z >= segment.startZ &&
-                    player.position.z < segment.endZ
-                );
-
-                if (!currentFork) {
-                    // We've moved past the fork, reset choice state
-                    gameState.choiceMade = false;
-                    gameState.choiceInProgress = false;
-                    player.userData.targetX = 0; // Return to center path
-                }
-                return;
-            }
-
-            // Check if player is in a fork segment
-            const currentSegment = trackSegments.find(segment =>
-                segment.type === 'fork' &&
-                player.position.z >= segment.startZ &&
-                player.position.z < segment.endZ
-            );
-
-            if (currentSegment && player.position.z >= currentSegment.splitPoint - 5 && !gameState.choiceInProgress) {
-                // Display choice UI with simplified text
-                const choiceContainer = document.getElementById('choice-container');
-                document.getElementById('choice-text').textContent = "SQUASH";
-                document.getElementById('choice-left').textContent = currentSegment.leftChoice;
-                document.getElementById('choice-right').textContent = currentSegment.rightChoice;
-                choiceContainer.style.display = 'block';
-
-                // Update progress bar
-                updateProgressBar();
-
-                gameState.choiceInProgress = true;
-
-                // Pause the game while making a choice
-                gameState.isRunning = false;
-            }
-        }
-
-        // Function to update the progress bar based on tournament progress
-        function updateProgressBar() {
-            const progressBar = document.getElementById('progress-bar');
-
-            // Calculate total number of choices needed to complete tournament
-            // For 8 options: 4 first round + 2 semifinals + 1 final = 7 total choices
-            const totalChoices = tournamentOptions.length - 1;
-
-            // Calculate how many choices have been made
-            let choicesMade = 0;
-
-            // Count choices made in each round
-            for (let i = 0; i <= tournamentState.currentRound; i++) {
-                if (i === tournamentState.currentRound) {
-                    // Current round: count completed matchups
-                    choicesMade += tournamentState.currentMatchupIndex;
-                } else {
-                    // Previous rounds: count all matchups
-                    const roundOptions = tournamentState.rounds[i] || [];
-                    choicesMade += Math.floor(roundOptions.length / 2);
-                }
-            }
-
-            // Calculate percentage
-            const progressPercentage = Math.min(100, (choicesMade / totalChoices) * 100);
-
-            // Update progress bar width
-            progressBar.style.width = progressPercentage + '%';
-        }
-
-        // Manage track cleanup for performance
-        function cleanupTrack() {
-            // Remove track segments that are far behind the player
-            const segmentsToRemove = [];
-            for (let i = 0; i < trackSegments.length; i++) {
-                if (trackSegments[i].endZ < player.position.z - 50) {
-                    segmentsToRemove.push(i);
-                }
-            }
-
-            // Remove segments from end to avoid index issues
-            for (let i = segmentsToRemove.length - 1; i >= 0; i--) {
-                const index = segmentsToRemove[i];
-                trackSegments.splice(index, 1);
-            }
-        }
-
-        // Game over handling
-        function gameOver() {
-            gameState.isRunning = false;
-
-            // Show game over screen
-            const gameOverScreen = document.getElementById('game-over');
-
-            // Update the UI to show the tournament winner
-            if (tournamentState.winner) {
-                const finalScore = document.getElementById('final-score');
-                finalScore.style.display = 'block';
-                finalScore.innerHTML = `<strong>Tournament Winner:</strong><br>"${tournamentState.winner.name}"`;
-            } else {
-                document.getElementById('final-score').style.display = 'none';
-            }
-
-            // Display decisions made
-            const decisionsList = document.getElementById('decisions-list');
-            decisionsList.innerHTML = '';
-            gameState.decisions.forEach((decision, index) => {
-                const decisionElement = document.createElement('div');
-                decisionElement.className = 'decision';
-                decisionElement.textContent = `${index + 1}. ${decision.dilemma} You crushed: ${decision.choice}`;
-                decisionsList.appendChild(decisionElement);
-            });
-
-            gameOverScreen.style.display = 'block';
-        }
-
-        // Restart the game
-        function restartGame() {
-            // Reset game state
-            gameState.decisions = [];
-            gameState.timeElapsed = 0;
-            gameState.choiceMade = false;
-            gameState.choiceInProgress = false;
-            gameState.nextChoiceTime = 10;
-            gameState.isRunning = true;
-
-            // Reset tournament state
-            initializeTournament();
-
-            // Reset progress bar to 0%
-            const progressBar = document.getElementById('progress-bar');
-            progressBar.style.width = '0%';
-
-            // Reset player position
-            player.position.set(0, 1, 0);
-            player.userData.targetX = 0;
-
-            // Hide game over screen
-            document.getElementById('game-over').style.display = 'none';
-
-            // Clear choice UI
-            document.getElementById('choice-container').style.display = 'none';
-
-            // Clear stats message
-            document.getElementById('stats-message').style.opacity = 0;
-
-            // Reset track
-            trackSegments.length = 0;
-            while (trackContainer.children.length > 0) {
-                trackContainer.remove(trackContainer.children[0]);
-            }
-            trackZ = 0;
-            initializeTrack();
-        }
-
-        // Animation loop
-        // Animation loop
+        // --- Initialization ---
+        function initializeTrack() { trackZ = 0; for (let i = 0; i < 5; i++) { createStraightTrackSegment(trackZ); if (trackSegments.length > 0) { trackZ = trackSegments[trackSegments.length - 1].endZ; } else { trackZ += segmentLength; } } }
+        function initGame() { initializeTrack(); initializeTournament(); addEventListeners(); updateProgressBar(); gameState.isRunning = true; animate(); }
+
+        // --- Event Listeners & UI ---
+        function addEventListeners() { document.getElementById('choice-left').addEventListener('click', () => makeChoice('left')); document.getElementById('choice-right').addEventListener('click', () => makeChoice('right')); document.getElementById('restart-button').addEventListener('click', restartGame); document.getElementById('instructions-toggle').addEventListener('click', toggleInstructions); window.addEventListener('keydown', (event) => { if (gameState.choiceInProgress && !gameState.choiceMade) { if (event.key === 'ArrowLeft') { makeChoice('left'); } else if (event.key === 'ArrowRight') { makeChoice('right'); } } }); window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }); }
+        function toggleInstructions() { const instructions = document.getElementById('instructions'); instructions.style.display = instructions.style.display === 'none' ? 'block' : 'none'; }
+        function makeChoice(direction) { if (gameState.choiceMade || !gameState.choiceInProgress) { return; } console.log(`Choice made: ${direction}`); gameState.choiceMade = true; gameState.choiceInProgress = false; document.getElementById('choice-container').style.display = 'none'; gameState.isRunning = true; const currentSegment = gameState.currentForkSegment; if (currentSegment && currentSegment.matchup) { const choiceText = direction === 'left' ? currentSegment.leftChoice : currentSegment.rightChoice; gameState.decisions.push({ dilemma: "SQUASH", choice: choiceText }); const matchup = currentSegment.matchup; let targetX; let squashedObject; let sacrificedName; if (direction === 'left') { recordMatchupResult(matchup.right); targetX = FORK_MERGE_OFFSET_X; squashedObject = currentSegment.leftObject; sacrificedName = matchup.left.name; } else { recordMatchupResult(matchup.left); targetX = -FORK_MERGE_OFFSET_X; squashedObject = currentSegment.rightObject; sacrificedName = matchup.right.name; } player.userData.targetX = targetX; showStatsMessage(sacrificedName); if (squashedObject) { let scale = 1; const shrinkInterval = setInterval(() => { scale -= 0.1; if (scale <= 0) { if (squashedObject.parent) trackContainer.remove(squashedObject); clearInterval(shrinkInterval); } else { squashedObject.scale.set(scale, scale, scale); } }, 20); } tournamentState.currentChoice = null; gameState.currentForkSegment = null; } else { console.warn("MakeChoice called but currentForkSegment or matchup was invalid."); gameState.isRunning = true; gameState.choiceInProgress = false; gameState.choiceMade = false; gameState.currentForkSegment = null; } }
+        function showStatsMessage(choiceText) { const peopleCount = Math.floor(Math.random() * 10000) + 1000; const percentage = Math.floor(Math.random() * 70) + 15; const statsMessage = document.getElementById('stats-message'); statsMessage.textContent = `${peopleCount.toLocaleString()} people (${percentage}%) also squashed ${choiceText}`; statsMessage.style.opacity = 1; setTimeout(() => { statsMessage.style.opacity = 0; }, 5000); }
+        function updateProgressBar() { const progressBar = document.getElementById('progress-bar'); const totalChoices = tournamentOptions.length - 1; let choicesMade = 0; for (let i = 0; i <= tournamentState.currentRound; i++) { if (i === tournamentState.currentRound) { choicesMade += tournamentState.currentMatchupIndex; } else { const roundOptions = tournamentState.rounds[i] || []; choicesMade += Math.floor(roundOptions.length / 2); } } const progressPercentage = Math.min(100, totalChoices > 0 ? (choicesMade / totalChoices) * 100 : 0); progressBar.style.width = progressPercentage + '%'; }
+
+        // --- Game Loop & Logic ---
+        function checkTrackGeneration() { /* ... (Unchanged from previous fix) ... */ const lastSegment = trackSegments[trackSegments.length - 1]; if (!lastSegment) { initializeTrack(); return; } if (player.position.z + 100 > lastSegment.endZ) { console.log(`Checking track generation. Player Z: ${player.position.z.toFixed(1)}, Last Segment End Z: ${lastSegment.endZ.toFixed(1)}`); const lastType = lastSegment.type; let nextSegmentStartZ = lastSegment.endZ; if (tournamentState.finished) { createStraightTrackSegment(nextSegmentStartZ); return; } if (lastType === 'fork') { createMergeSegment(nextSegmentStartZ); } else if (lastType === 'merge' || lastType === 'straight') { if (!tournamentState.currentChoice && !gameState.choiceInProgress && !gameState.choiceMade) { const matchup = getNextMatchup(); if (matchup) { console.log("Got next matchup, creating fork sequence."); tournamentState.currentChoice = matchup; const straightBeforeFork = createStraightTrackSegment(nextSegmentStartZ, segmentLength * 1.5); nextSegmentStartZ = straightBeforeFork.endZ; const tournamentChoice = { text: "SQUASH", left: matchup.left.name, right: matchup.right.name, matchup: matchup }; createForkSegment(nextSegmentStartZ, tournamentChoice); } else if (!tournamentState.finished) { console.log("No matchup ready or tournament finished, creating straight."); createStraightTrackSegment(nextSegmentStartZ); } } else { console.log("Choice locked or in progress, creating straight."); createStraightTrackSegment(nextSegmentStartZ); } } if (trackSegments.length > 0) { trackZ = trackSegments[trackSegments.length - 1].endZ; } } }
+        function checkChoiceSegment() { /* ... (Unchanged from previous fix) ... */ if (gameState.choiceMade) { const lastForkIndex = trackSegments.findLastIndex(s => s.type === 'fork'); if (lastForkIndex !== -1 && lastForkIndex + 1 < trackSegments.length) { const mergeSegment = trackSegments[lastForkIndex + 1]; if (mergeSegment && mergeSegment.type === 'merge' && player.position.z > mergeSegment.mergePoint + 5) { console.log("Player past merge point, resetting choiceMade flag."); gameState.choiceMade = false; player.userData.targetX = 0; gameState.currentForkSegment = null; } } else if (lastForkIndex === -1) { gameState.choiceMade = false; player.userData.targetX = 0; gameState.currentForkSegment = null; } return; } if (!gameState.choiceInProgress) { for (const segment of trackSegments) { if (segment.type === 'fork' && !segment.triggered && tournamentState.currentChoice && segment.matchup === tournamentState.currentChoice) { if (player.position.z >= segment.splitPoint - 15 && player.position.z < segment.splitPoint) { console.log(`Entering choice zone for fork at Z: ${segment.startZ}`); segment.triggered = true; gameState.currentForkSegment = segment; const choiceContainer = document.getElementById('choice-container'); document.getElementById('choice-text').textContent = "SQUASH"; document.getElementById('choice-left').textContent = segment.leftChoice; document.getElementById('choice-right').textContent = segment.rightChoice; choiceContainer.style.display = 'block'; updateProgressBar(); gameState.choiceInProgress = true; gameState.isRunning = false; break; } } } } }
+        function cleanupTrack() { /* ... (Unchanged from previous fix) ... */ const removalThreshold = player.position.z - 120; let removedCount = 0; for (let i = trackSegments.length - 1; i >= 0; i--) { const segment = trackSegments[i]; if (segment.endZ < removalThreshold) { const meshesToRemove = [segment.meshGroup, segment.leftPathMesh, segment.rightPathMesh, segment.leftObject, segment.rightObject]; meshesToRemove.forEach(mesh => { if (mesh && mesh.parent) { trackContainer.remove(mesh); } }); trackSegments.splice(i, 1); removedCount++; } } }
+        function gameOver() { /* ... (Unchanged) ... */ gameState.isRunning = false; const gameOverScreen = document.getElementById('game-over'); const finalScoreP = document.getElementById('final-score'); if (tournamentState.winner) { finalScoreP.innerHTML = `<strong>Tournament Winner:</strong><br>"${tournamentState.winner.name}" - ${tournamentState.winner.description}`; finalScoreP.style.display = 'block'; } else { finalScoreP.style.display = 'none'; } const decisionsList = document.getElementById('decisions-list'); decisionsList.innerHTML = ''; gameState.decisions.forEach((decision, index) => { const decisionElement = document.createElement('div'); decisionElement.className = 'decision'; decisionElement.textContent = `${index + 1}. You squashed: ${decision.choice}`; decisionsList.appendChild(decisionElement); }); gameOverScreen.style.display = 'block'; }
+        function restartGame() { /* ... (Unchanged) ... */ gameState.decisions = []; gameState.timeElapsed = 0; gameState.choiceMade = false; gameState.choiceInProgress = false; gameState.isRunning = true; gameState.currentForkSegment = null; initializeTournament(); updateProgressBar(); player.position.set(0, 0.5, 0); player.userData.targetX = 0; document.getElementById('game-over').style.display = 'none'; document.getElementById('choice-container').style.display = 'none'; document.getElementById('stats-message').style.opacity = 0; trackSegments.length = 0; while (trackContainer.children.length > 0) { const child = trackContainer.children[0]; trackContainer.remove(child); } trackZ = 0; initializeTrack(); }
+
+        // --- Animation Loop ---
         function animate() {
             requestAnimationFrame(animate);
+            const deltaTime = 0.016; // Fixed delta time
+
+            let currentSegment = null;
+            let progress = 0;
+            let targetXPathX = 0; // Default target X is center
+
+            // Find current segment and calculate target X for path following
+            for (const segment of trackSegments) {
+                if (player.position.z >= segment.startZ && player.position.z < segment.endZ) {
+                    currentSegment = segment;
+                    break;
+                }
+            }
+
+            // NITPICK FIX 3: Player Path Following
+            if (currentSegment) {
+                if (currentSegment.type === 'fork' && player.userData.targetX !== 0) {
+                    // Player is on a fork path after making a choice
+                    progress = Math.max(0, Math.min(1, (player.position.z - currentSegment.splitPoint) / (currentSegment.endZ - currentSegment.splitPoint)));
+                    const pathFunc = (player.userData.targetX < 0) ? forkPath(true) : forkPath(false); // targetX -4 is left path, +4 is right path
+                    targetXPathX = pathFunc(progress).position.x;
+                } else if (currentSegment.type === 'merge' && player.userData.targetX !== 0) {
+                    // Player is on a merge path
+                    progress = Math.max(0, Math.min(1, (player.position.z - currentSegment.startZ) / (currentSegment.mergePoint - currentSegment.startZ)));
+                    const pathFunc = (player.userData.targetX < 0) ? mergePath(true) : mergePath(false); // targetX -4 is left path, +4 is right path
+                    targetXPathX = pathFunc(progress).position.x;
+                } else {
+                    // On straight track or before choice on fork, target is center (or current targetX if transitioning)
+                    targetXPathX = player.userData.targetX; // Use the stored targetX (should be 0 after merge)
+                }
+            } else {
+                // Off track? Or very beginning? Default to center.
+                targetXPathX = 0;
+            }
+
 
             if (gameState.isRunning) {
-                // Update time
-                gameState.timeElapsed += 0.01;
+                gameState.timeElapsed += deltaTime;
+                const baseSpeed = 15;
+                player.position.z += baseSpeed * deltaTime;
 
-                // Fixed speed
-                const baseSpeed = 0.15;
+                // Interpolate towards the calculated target X for the current path segment
+                player.position.x += (targetXPathX - player.position.x) * 0.08; // Slightly smoother interpolation factor
 
-                // If just starting, gradually accelerate to full speed
-                let currentSpeed;
-                if (gameState.timeElapsed < 5) {
-                    currentSpeed = baseSpeed * Math.min(gameState.timeElapsed / 5, 1);
-                } else {
-                    currentSpeed = baseSpeed;
-                }
+                player.position.y = 0.5 + Math.sin(gameState.timeElapsed * 8) * 0.05;
 
-                // Move player forward at constant speed after initial acceleration
-                player.position.z += currentSpeed;
+                // NITPICK FIX 5: Adjusted camera follow logic
+                camera.position.z = player.position.z - 8; // Maintain distance
+                camera.position.y = player.position.y + 3.0; // Adjusted Y offset relative to player
+                // Look slightly down and ahead
+                const lookAtTarget = new THREE.Vector3(player.position.x * 0.5, player.position.y - 1.0, player.position.z + 15); // Look lower
+                camera.lookAt(lookAtTarget);
 
-                // If player has a target X position (for forks), interpolate towards it
-                if (player.userData.targetX !== undefined) {
-                    player.position.x += (player.userData.targetX - player.position.x) * 0.05;
-                }
 
-                // Make player bob up and down slightly as they run
-                player.position.y = 1 + Math.sin(gameState.timeElapsed * 5) * 0.1;
-
-                // Move camera to follow player
-                camera.position.z = player.position.z - 10;
-                camera.lookAt(player.position.x, player.position.y, player.position.z + 10);
-
-                // Check if we need to generate more track
                 checkTrackGeneration();
-
-                // Check if player is approaching a choice
                 checkChoiceSegment();
-
-                // Update impact effects
-                updateImpactEffects();
-
-                // Clean up old track segments for performance
                 cleanupTrack();
-
-                // If player falls off track, game over
-                if (Math.abs(player.position.x) > 5) {
-                    gameOver();
-                }
             }
 
             renderer.render(scene, camera);
         }
 
-        // Add fog for distance effect
-        scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
+        // --- Start Game ---
+        initGame();
 
-        // Start the game
-        init();
-
-        // Helper function to toggle instructions
-        function toggleInstructions() {
-            const instructions = document.getElementById('instructions');
-            instructions.style.display = instructions.style.display === 'none' ? 'block' : 'none';
-        }
     </script>
-
-    <!-- Add instructions overlay -->
-    <!-- Replace your instructions div with this -->
-    <div id="instructions"
-        style="position: absolute; top: 20px; right: 20px; background-color: rgba(0,0,0,0.7); color: white; padding: 20px; border-radius: 10px; max-width: 300px; font-size: 14px;">
-        <h2>Trolley Problem Runner</h2>
-        <p><strong>Controls:</strong></p>
-        <ul>
-            <li>Left/Right Arrow: Choose track at forks</li>
-            <li>Up/Down Arrow: Adjust speed</li>
-            <li>D: Toggle day/night mode</li>
-        </ul>
-        <p>Face moral dilemmas as you run along the tracks. Each choice matters!</p>
-        <button id="instructions-toggle"
-            style="background: gold; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">Hide
-            Instructions</button>
-    </div>
 </body>
+
+</html>
