@@ -544,11 +544,11 @@
             return { leftRail, rightRail };
         }
 
-        // Create the L-shaped track with explicitly defined vertices
+        // Creating the L-shaped track with properly defined shapes
         function createLShapedTrack(startZ, segmentCount) {
             const trackGroup = new THREE.Group();
             const spacing = 2.5;  // Spacing between consecutive L segments
-            const xOffset = -2;  // Lateral offset for clear separation
+            const xOffset = 2;  // Lateral offset
 
             for (let i = 0; i < segmentCount; i++) {
                 // Strict alternating pattern
@@ -556,25 +556,24 @@
                 const z = startZ + (i * spacing);
 
                 // Create an L shape directly with vertices
-                // Using a much more elongated shape
                 const shape = new THREE.Shape();
 
                 if (isLeft) {
                     // Left side L (explicitly elongated)
                     shape.moveTo(0, 0);
-                    shape.lineTo(0, -2);     // Long vertical line (3 units)
+                    shape.lineTo(0, -2);     // Long vertical line
                     shape.lineTo(-0.5, -2);   // Short horizontal connector
                     shape.lineTo(-0.5, -0.5); // Short vertical connector
-                    shape.lineTo(-4, -0.5);   // Long horizontal line (2 units)
+                    shape.lineTo(-4, -0.5);   // Long horizontal line
                     shape.lineTo(-4, 0);     // Short vertical connector
                     shape.lineTo(0, 0);     // Close shape
                 } else {
                     // Right side L (explicitly elongated)
                     shape.moveTo(0, 0);
-                    shape.lineTo(0, -2);     // Long vertical line (3 units)
+                    shape.lineTo(0, -2);     // Long vertical line
                     shape.lineTo(0.5, -2);  // Short horizontal connector
                     shape.lineTo(0.5, -0.5); // Short vertical connector
-                    shape.lineTo(4, -0.5);   // Long horizontal line (2 units)
+                    shape.lineTo(4, -0.5);   // Long horizontal line
                     shape.lineTo(4, 0);     // Short vertical connector
                     shape.lineTo(0, 0);      // Close shape
                 }
@@ -593,52 +592,65 @@
                 });
 
                 const lMesh = new THREE.Mesh(geometry, material);
-                lMesh.castShadow = true;
+                lMesh.castShadow = true;  // Enable shadow casting
+                lMesh.receiveShadow = true; // Enable shadow receiving
 
                 // Position the L flat on the ground
                 lMesh.rotation.x = -Math.PI / 2;  // Lay flat
 
-                // Position left/right
+                // Position left/right with proper offset
                 if (isLeft) {
-                    lMesh.position.set(-xOffset, 0, z);
-                } else {
                     lMesh.position.set(xOffset, 0, z);
+                } else {
+                    lMesh.position.set(-xOffset, 0, z);
                 }
 
                 trackGroup.add(lMesh);
-
-                console.log(`Created ${isLeft ? 'LEFT' : 'RIGHT'} L at z=${z}`);
             }
 
             return trackGroup;
         }
-
-        // Create a fork track with elongated L-shaped patterns
+        // Create a fork track that uses the same L-shape pattern as the main track
         function createLShapedForkTrack(startZ, length, isLeftPath) {
             const trackGroup = new THREE.Group();
-            const lWidth = 0.6;
-            const lLength = 1.5;
-            const spacing = 3;
+            const spacing = 2.5;  // Same spacing as main track
             const segmentCount = Math.ceil(length / spacing);
 
             // Calculate curve parameters
             const maxOffset = isLeftPath ? -3 : 3; // Maximum lateral offset
+            const startOffset = isLeftPath ? -2 : 2; // Starting position
 
             for (let i = 0; i < segmentCount; i++) {
-                const progress = Math.min(i / (segmentCount * 0.7), 1); // Progress along the curve
-                const offset = maxOffset * progress; // Current lateral offset
-
+                // Calculate position along curve
+                const progress = Math.min(i / (segmentCount * 0.7), 1);
+                const xOffset = startOffset + (maxOffset - startOffset) * progress;
                 const z = startZ + (i * spacing);
 
-                // Create elongated L shape
-                const lShape = new THREE.Shape();
-                lShape.moveTo(0, 0);
-                lShape.lineTo(0, lLength);
-                lShape.lineTo(lWidth, lLength);
-                lShape.lineTo(lWidth, lWidth);
-                lShape.lineTo(lLength, lWidth);
-                lShape.lineTo(lLength, 0);
-                lShape.lineTo(0, 0);
+                // Alternate L shapes like on main track
+                const isLeft = i % 2 === 0;
+
+                // Create L shape with same pattern as main track
+                const shape = new THREE.Shape();
+
+                if (isLeft) {
+                    // Left side L 
+                    shape.moveTo(0, 0);
+                    shape.lineTo(0, -2);
+                    shape.lineTo(-0.5, -2);
+                    shape.lineTo(-0.5, -0.5);
+                    shape.lineTo(-4, -0.5);
+                    shape.lineTo(-4, 0);
+                    shape.lineTo(0, 0);
+                } else {
+                    // Right side L
+                    shape.moveTo(0, 0);
+                    shape.lineTo(0, -2);
+                    shape.lineTo(0.5, -2);
+                    shape.lineTo(0.5, -0.5);
+                    shape.lineTo(4, -0.5);
+                    shape.lineTo(4, 0);
+                    shape.lineTo(0, 0);
+                }
 
                 const extrudeSettings = {
                     steps: 1,
@@ -646,7 +658,118 @@
                     bevelEnabled: false
                 };
 
-                const geometry = new THREE.ExtrudeGeometry(lShape, extrudeSettings);
+                const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0xFAD02C,
+                    metalness: 0.7,
+                    roughness: 0.3
+                });
+
+                const lMesh = new THREE.Mesh(geometry, material);
+
+                // Fix shadow casting
+                lMesh.castShadow = true;
+                lMesh.receiveShadow = true;
+
+                // Position with proper offset and lay flat
+                lMesh.rotation.x = -Math.PI / 2;
+
+                // Apply curve position offset
+                if (isLeftPath) {
+                    lMesh.position.set(xOffset - (isLeft ? 0 : 4), 0, z);
+                } else {
+                    lMesh.position.set(xOffset + (isLeft ? 4 : 0), 0, z);
+                }
+
+                // Apply slight rotation to follow curve
+                const rotationY = isLeftPath ? 0.2 * progress : -0.2 * progress;
+                lMesh.rotation.y = rotationY;
+
+                trackGroup.add(lMesh);
+            }
+
+            return trackGroup;
+        }
+
+        // Fix shadows for all objects
+        function fixShadows() {
+            // Enable shadows on renderer
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            // Light shadow settings
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.near = 0.5;
+            directionalLight.shadow.camera.far = 500;
+            directionalLight.shadow.camera.left = -50;
+            directionalLight.shadow.camera.right = 50;
+            directionalLight.shadow.camera.top = 50;
+            directionalLight.shadow.camera.bottom = -50;
+
+            // Player shadow
+            player.castShadow = true;
+            player.receiveShadow = false;
+
+            // Ground shadow
+            ground.receiveShadow = true;
+            ground.castShadow = false;
+
+            // Helper to show light's view (uncomment for debugging)
+            // const helper = new THREE.CameraHelper(directionalLight.shadow.camera);
+            // scene.add(helper);
+        }
+
+        // Create a merged version of the L-shaped track for the merge section
+        function createLShapedMergeTrack(startZ, length, isLeftPath) {
+            const trackGroup = new THREE.Group();
+            const spacing = 2.5;
+            const segmentCount = Math.ceil(length / spacing);
+
+            // Curve from offset position back to center
+            const startOffset = isLeftPath ? -5 : 5;
+            const endOffset = isLeftPath ? -2 : 2;
+
+            for (let i = 0; i < segmentCount; i++) {
+                // Calculate position along curve (from outside to inside)
+                const progress = i / segmentCount;
+                const xOffset = startOffset + (endOffset - startOffset) * progress;
+                const z = startZ + (i * spacing);
+
+                // Alternate L shapes
+                const isLeft = i % 2 === 0;
+
+                // Create L shape
+                const shape = new THREE.Shape();
+
+                if (isLeft) {
+                    // Left side L
+                    shape.moveTo(0, 0);
+                    shape.lineTo(0, -2);
+                    shape.lineTo(-0.5, -2);
+                    shape.lineTo(-0.5, -0.5);
+                    shape.lineTo(-4, -0.5);
+                    shape.lineTo(-4, 0);
+                    shape.lineTo(0, 0);
+                } else {
+                    // Right side L
+                    shape.moveTo(0, 0);
+                    shape.lineTo(0, -2);
+                    shape.lineTo(0.5, -2);
+                    shape.lineTo(0.5, -0.5);
+                    shape.lineTo(4, -0.5);
+                    shape.lineTo(4, 0);
+                    shape.lineTo(0, 0);
+                }
+
+                const extrudeSettings = {
+                    steps: 1,
+                    depth: 0.1,
+                    bevelEnabled: false
+                };
+
+                const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
                 const material = new THREE.MeshStandardMaterial({
                     color: 0xFAD02C,
                     metalness: 0.7,
@@ -655,20 +778,21 @@
 
                 const lMesh = new THREE.Mesh(geometry, material);
                 lMesh.castShadow = true;
+                lMesh.receiveShadow = true;
 
-                // Position with offset and curve
-                const xPosition = isLeftPath ? -lLength / 2 + offset : lLength / 2 + offset;
-                lMesh.position.set(xPosition, 0, z);
-                lMesh.rotation.x = -Math.PI / 2; // Flat on ground
+                // Position flat on ground
+                lMesh.rotation.x = -Math.PI / 2;
 
-                // Slightly rotate to follow curve
-                const rotationY = isLeftPath ? 0.2 * progress : -0.2 * progress;
-                lMesh.rotation.y = rotationY;
-
-                // Alternate the rotation around z-axis for visual interest
-                if (i % 2 === 1) {
-                    lMesh.rotation.z = Math.PI;
+                // Apply curve position
+                if (isLeftPath) {
+                    lMesh.position.set(xOffset - (isLeft ? 0 : 4), 0, z);
+                } else {
+                    lMesh.position.set(xOffset + (isLeft ? 4 : 0), 0, z);
                 }
+
+                // Apply slight rotation to follow curve
+                const rotationY = isLeftPath ? -0.2 * (1 - progress) : 0.2 * (1 - progress);
+                lMesh.rotation.y = rotationY;
 
                 trackGroup.add(lMesh);
             }
@@ -677,6 +801,7 @@
         }
 
         // Update createForkSegment to use L-shaped tracks
+        // Update createForkSegment to use improved L-shaped tracks
         function createForkSegment(startZ, choice) {
             const forkLength = segmentLength * 2;
             const segment = {
@@ -688,15 +813,16 @@
                 rails: [],
                 choiceText: choice.text,
                 splitPoint: startZ + segmentLength / 3,
-                matchup: choice.matchup  // Store the matchup data
+                matchup: choice.matchup
             };
 
             // First part is straight
             createStraightTrackSegment(startZ, segment.splitPoint - startZ);
 
-            // Create diverging tracks with L-shapes
+            // Create diverging tracks with consistent L-shapes
             const leftPath = createLShapedForkTrack(segment.splitPoint, forkLength * 2 / 3, true);
             const rightPath = createLShapedForkTrack(segment.splitPoint, forkLength * 2 / 3, false);
+
             trackContainer.add(leftPath);
             trackContainer.add(rightPath);
 
@@ -711,6 +837,7 @@
             const leftChoiceMat = new THREE.MeshStandardMaterial({ color: 0xFF0000 });
             const leftChoiceObj = new THREE.Mesh(leftChoiceGeom, leftChoiceMat);
             leftChoiceObj.position.set(-3, 1, choiceZ);
+            leftChoiceObj.castShadow = true;
             leftChoiceObj.userData.choice = 'left';
             leftChoiceObj.userData.text = choice.left;
             trackContainer.add(leftChoiceObj);
@@ -721,6 +848,7 @@
             const rightChoiceMat = new THREE.MeshStandardMaterial({ color: 0xFF0000 });
             const rightChoiceObj = new THREE.Mesh(rightChoiceGeom, rightChoiceMat);
             rightChoiceObj.position.set(3, 1, choiceZ);
+            rightChoiceObj.castShadow = true;
             rightChoiceObj.userData.choice = 'right';
             rightChoiceObj.userData.text = choice.right;
             trackContainer.add(rightChoiceObj);
@@ -729,8 +857,8 @@
             trackSegments.push(segment);
             return segment;
         }
-
         // Update merge segment to use L-shaped tracks
+        // Update merge segment to use consistent L-shaped tracks
         function createMergeSegment(startZ) {
             const mergeLength = segmentLength * 2;
             const segment = {
@@ -741,13 +869,9 @@
                 mergePoint: startZ + mergeLength * 2 / 3
             };
 
-            // Create converging tracks with L-shapes
-            const leftPath = createLShapedForkTrack(startZ, mergeLength * 2 / 3, false); // Reverse direction
-            const rightPath = createLShapedForkTrack(startZ, mergeLength * 2 / 3, true); // Reverse direction
-
-            // Adjust to start from offset positions
-            leftPath.position.x = -3;
-            rightPath.position.x = 3;
+            // Create converging tracks with consistent L-shapes
+            const leftPath = createLShapedMergeTrack(startZ, mergeLength * 2 / 3, true);
+            const rightPath = createLShapedMergeTrack(startZ, mergeLength * 2 / 3, false);
 
             trackContainer.add(leftPath);
             trackContainer.add(rightPath);
@@ -791,7 +915,11 @@
         }
 
         // Initialize the game
+        // Initialize the game
         function init() {
+            // Fix shadows before creating any objects
+            fixShadows();
+
             initializeTrack();
             initializeTournament();
             addEventListeners();
